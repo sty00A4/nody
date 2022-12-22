@@ -22,7 +22,12 @@ fn main() {
             }
             Err(e) => eprintln!("{e}")
         }
-        None => {}
+        None => {
+            println!("This is Nody interpreter is written in Rust.");
+            println!("USAGE:");
+            println!("  nody [file path] - execute file");
+            println!("  ...more comming soon...");
+        }
     }
 }
 
