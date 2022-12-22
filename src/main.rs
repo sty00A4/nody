@@ -17,8 +17,9 @@ fn main() {
     args.next();
     match args.next() {
         Some(path) => match std::fs::read_to_string(path) {
-            Ok(text) => {
-                let node = scan_file(path, text);
+            Ok(text) => match scan_file(path, text) {
+                Ok(node) => println!("{node}"),
+                Err(e) => println!("{e:?}")
             }
             Err(e) => eprintln!("{e}")
         }

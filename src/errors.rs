@@ -9,4 +9,5 @@ impl Position {
     }
 }
 
+#[derive(Debug, Clone)]
 pub enum Error {}
