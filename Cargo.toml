@@ -1,0 +1,9 @@
+[package]
+name = "nody"
+version = "0.1.0"
+edition = "2021"
+[profile.release]
+opt-levl="z"
+lto=true
+strip=true
+codegen-units=1
