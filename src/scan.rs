@@ -1,6 +1,7 @@
 use crate::*;
 
 pub const WS: [&str; 4] = [" ", "\r", "\t", "\n"];
+pub const SYMBOLS: [&str; 9] = ["(", ")", "[", "]", "{", "}", "@", "#", "$"];
 pub type NodeRef = Box<Node>;
 #[derive(Clone, Debug)]
 pub enum Node {
@@ -9,7 +10,8 @@ pub enum Node {
     Type { v: Type, pos: Position },
     Word { v: String, pos: Position }, Key { v: String, pos: Position },
     Node { head: NodeRef, args: Vec<NodeRef>, pos: Position }, Body { nodes: Vec<Node>, pos: Position },
-    Vector { nodes: Vec<Node>, pos: Position }
+    Vector { nodes: Vec<Node>, pos: Position },
+    Closure { node: NodeRef, pos: Position }, Params { node: NodeRef, pos: Position }
 }
 impl Display for Node {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -25,6 +27,8 @@ impl Display for Node {
             Node::Node { head, args, pos }  => write!(f, "({head} {})", args.iter().map(|x| x.to_string()).collect::<Vec<String>>().join(" ")),
             Node::Body { nodes, pos }       => write!(f, "{{{}}}", nodes.iter().map(|x| x.to_string()).collect::<Vec<String>>().join(" ")),
             Node::Vector { nodes, pos }     => write!(f, "[{}]", nodes.iter().map(|x| x.to_string()).collect::<Vec<String>>().join(" ")),
+            Node::Closure { node, pos }     => write!(f, "#{node}"),
+            Node::Params { node, pos }     => write!(f, "${node}"),
         }
     }
 }
@@ -107,8 +111,23 @@ impl Scanner {
                 let (start_ln, start_col) = (self.ln, self.col);
                 self.advance();
                 let mut word = String::new();
-                while !WS.contains(&self.get()) && self.get() != "" { word.push_str(self.get()); }
+                while !WS.contains(&self.get()) && !SYMBOLS.contains(&self.get()) && self.get() != "" {
+                    word.push_str(self.get());
+                    self.advance();
+                }
                 Ok(Node::Key { v: word, pos: Position::new(start_ln..self.ln, start_col..self.col, &self.path) })
+            }
+            "#" => {
+                let (start_ln, start_col) = (self.ln, self.col);
+                self.advance(); self.advance_ws();
+                let node = self.node()?;
+                Ok(Node::Closure { node: Box::new(node), pos: Position::new(start_ln..self.ln, start_col..self.col, &self.path) })
+            }
+            "$" => {
+                let (start_ln, start_col) = (self.ln, self.col);
+                self.advance(); self.advance_ws();
+                let node = self.node()?;
+                Ok(Node::Params { node: Box::new(node), pos: Position::new(start_ln..self.ln, start_col..self.col, &self.path) })
             }
             _ if self.get_char().is_ascii_digit() => {
                 let (start_ln, start_col) = (self.ln, self.col);
@@ -131,7 +150,7 @@ impl Scanner {
             _ => {
                 let (start_ln, start_col) = (self.ln, self.col);
                 let mut word = String::new();
-                while !WS.contains(&self.get()) && self.get() != "" {
+                while !WS.contains(&self.get()) && !SYMBOLS.contains(&self.get()) && self.get() != "" {
                     word.push_str(self.get());
                     self.advance();
                 }
