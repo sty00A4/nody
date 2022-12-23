@@ -153,7 +153,7 @@ impl Scanner {
                     "bool"    => Ok(Node::Type { v: Type::Bool, pos }),
                     "str"     => Ok(Node::Type { v: Type::String, pos }),
                     "vec"     => Ok(Node::Type { v: Type::Vector(None), pos }),
-                    "fn"      => Ok(Node::Type { v: Type::Function(vec![]), pos }),
+                    "fn"      => Ok(Node::Type { v: Type::Function(vec![], None), pos }),
                     "type"    => Ok(Node::Type { v: Type::Type, pos }),
                     _ => Ok(Node::Word { v: word, pos })
                 }
