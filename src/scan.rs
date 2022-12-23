@@ -5,10 +5,11 @@ pub type NodeRef = Box<Node>;
 #[derive(Clone, Debug)]
 pub enum Node {
     Int { v: i64, pos: Position }, Float{ v: f64, pos: Position },
-    Bool{ v: bool, pos: Position }, String{ v: String, pos: Position }, Null { pos: Position },
-    Word{ v: String, pos: Position }, Key{ v: String, pos: Position },
-    Node{ head: NodeRef, args: Vec<NodeRef>, pos: Position }, Body{ nodes: Vec<Node>, pos: Position },
-    Vector{ nodes: Vec<Node>, pos: Position }
+    Bool { v: bool, pos: Position }, String { v: String, pos: Position }, Null { pos: Position },
+    Type { v: Type, pos: Position },
+    Word { v: String, pos: Position }, Key { v: String, pos: Position },
+    Node { head: NodeRef, args: Vec<NodeRef>, pos: Position }, Body { nodes: Vec<Node>, pos: Position },
+    Vector { nodes: Vec<Node>, pos: Position }
 }
 impl Display for Node {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -18,6 +19,7 @@ impl Display for Node {
             Node::Bool { v, pos }           => write!(f, "{v:?}"),
             Node::String { v, pos }         => write!(f, "{v:?}"),
             Node::Null { pos }              => write!(f, "null"),
+            Node::Type { v, pos }           => write!(f, "{v:?}"),
             Node::Word { v, pos }           => write!(f, "{v}"),
             Node::Key { v, pos }            => write!(f, "@{v}"),
             Node::Node { head, args, pos }  => write!(f, "({head} {})", args.iter().map(|x| x.to_string()).collect::<Vec<String>>().join(" ")),
@@ -133,7 +135,28 @@ impl Scanner {
                     word.push_str(self.get());
                     self.advance();
                 }
-                Ok(Node::Word { v: word, pos: Position::new(start_ln..self.ln, start_col..self.col, &self.path) })
+                let pos = Position::new(start_ln..self.ln, start_col..self.col, &self.path);
+                match word.as_str() {
+                    "int"     => Ok(Node::Type { v: Type::Int, pos }),
+                    "int8"    => Ok(Node::Type { v: Type::Int8, pos }),
+                    "int16"   => Ok(Node::Type { v: Type::Int16, pos }),
+                    "int32"   => Ok(Node::Type { v: Type::Int32, pos }),
+                    "int64"   => Ok(Node::Type { v: Type::Int64, pos }),
+                    "int128"  => Ok(Node::Type { v: Type::Int128, pos }),
+                    "uint"    => Ok(Node::Type { v: Type::UInt, pos }),
+                    "uint8"   => Ok(Node::Type { v: Type::UInt8, pos }),
+                    "uint16"  => Ok(Node::Type { v: Type::UInt16, pos }),
+                    "uint32"  => Ok(Node::Type { v: Type::UInt32, pos }),
+                    "uint64"  => Ok(Node::Type { v: Type::UInt64, pos }),
+                    "uint128" => Ok(Node::Type { v: Type::UInt128, pos }),
+                    "char"    => Ok(Node::Type { v: Type::Char, pos }),
+                    "bool"    => Ok(Node::Type { v: Type::Bool, pos }),
+                    "str"     => Ok(Node::Type { v: Type::String, pos }),
+                    "vec"     => Ok(Node::Type { v: Type::Vector(None), pos }),
+                    "fn"      => Ok(Node::Type { v: Type::Function(vec![]), pos }),
+                    "type"    => Ok(Node::Type { v: Type::Type, pos }),
+                    _ => Ok(Node::Word { v: word, pos })
+                }
             }
         }
     }
