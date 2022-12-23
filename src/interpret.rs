@@ -58,6 +58,9 @@ impl Scope {
         }
     }
 }
+impl PartialEq for Scope {
+    fn eq(&self, other: &Self) -> bool { false }
+}
 #[derive(Debug, Clone)]
 pub struct Context {
     pub scopes: Vec<Scope>,

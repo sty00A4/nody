@@ -40,7 +40,7 @@ pub enum Value {
     Int8(i8), Int16(i16), Int32(i32), Int64(i64), Int128(i128), Int(isize),
     UInt8(u8), UInt16(u16), UInt32(u32), UInt64(u64), UInt128(u128), UInt(usize),
     Char(char), Bool(bool), String(String), Vector(Vec<Value>, Option<Type>),
-    Function(Function),
+    Function(Function), Object(Scope),
     Type(Type)
 }
 impl Value {
@@ -63,6 +63,7 @@ impl Value {
             Self::String(_)     => Type::String,
             Self::Vector(_, t)  => if let Some(t) = t { Type::Vector(Some(Box::new(t.clone()))) } else { Type::Vector(None) }
             Self::Function(f)   => Type::Function(f.type_params(), f.return_type_boxed()),
+            Self::Object(_)     => Type::Object,
             Self::Type(_)       => Type::Type
         }
     }
@@ -87,6 +88,7 @@ impl Debug for Value {
             Self::String(v)     => v.to_string(),
             Self::Vector(v, _)  => format!("{v:?}"),
             Self::Function(v)   => v.to_string(),
+            Self::Object(_)     => "obj".to_string(),
             Self::Type(v)       => v.to_string()
         })
     }
@@ -111,6 +113,7 @@ impl Display for Value {
             Self::String(v)     => v.to_string(),
             Self::Vector(v, _)  => format!("{v:?}"),
             Self::Function(v)   => v.to_string(),
+            Self::Object(_)     => "obj".to_string(),
             Self::Type(v)       => v.to_string()
         })
     }
@@ -120,7 +123,7 @@ pub enum Type {
     Int8, Int16, Int32, Int64, Int128, Int,
     UInt8, UInt16, UInt32, UInt64, UInt128, UInt,
     Char, Bool, String, Vector(Option<Box<Type>>),
-    Function(Vec<Type>, Option<Box<Type>>),
+    Function(Vec<Type>, Option<Box<Type>>), Object,
     Type
 }
 impl Debug for Type {
@@ -143,6 +146,7 @@ impl Debug for Type {
             Self::String         => "str".to_string(),
             Self::Vector(t)      => if let Some(t) = t { format!("vec<{t:?}>") } else { format!("vec") }
             Self::Function(p, r) => format!("fn({p:?})"),
+            Self::Object         => "obj".to_string(),
             Self::Type           => "type".to_string()
         })
     }
@@ -167,6 +171,7 @@ impl Display for Type {
             Self::String         => "str".to_string(),
             Self::Vector(t)      => if let Some(t) = t { format!("vec<{t}>") } else { format!("vec") }
             Self::Function(t, r) => format!("fn({})", t.iter().map(|x| x.to_string()).collect::<Vec<String>>().join(" ")),
+            Self::Object         => "obj".to_string(),
             Self::Type           => "type".to_string()
         })
     }
