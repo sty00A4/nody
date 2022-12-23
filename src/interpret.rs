@@ -9,7 +9,7 @@ pub struct Scope {
 impl Scope {
     pub fn new() -> Self { Scope { vars: HashMap::new(), funcs: HashMap::new(), subs: HashMap::new() } }
     pub fn create_var(&mut self, id: String, value: Value, mutable: bool, pos: Position) -> Result<(), Error> {
-        if self.vars.contains_key(&id) { todo!("already defined") }
+        if self.vars.contains_key(&id) { return Err(Error::AlreadyDefined(id)) }
         self.vars.insert(id, (value, mutable, pos));
         Ok(())
     }
@@ -22,9 +22,9 @@ impl Scope {
                 *old_value = value;
                 Ok(())
             } else {
-                todo!("immutable")
+                Err(Error::Immutable(id))
             }
-            None => todo!("not defined")
+            None => Err(Error::NotDefined(id))
         }
     }
     pub fn get_var(&self, id: &String) -> Option<&Value> {
@@ -104,7 +104,7 @@ impl Context {
     pub fn create_var(&mut self, id: String, value: Value, mutable: bool, pos: Position) -> Result<(), Error> {
         match self.get_scope_var_mut(&id) {
             None => self.scopes.last_mut().unwrap().create_var(id, value, mutable, pos),
-            Some(_) => todo!("already defined")
+            Some(_) => Err(Error::AlreadyDefined(id))
         }
     }
     pub fn del_var(&mut self, id: &String) -> Option<(Value, bool, Position)> {
@@ -116,7 +116,7 @@ impl Context {
                 *old_value = value;
                 return Ok(())
             } else {
-                todo!("immutable")
+                return Err(Error::Immutable(id))
             }
             None => {}
         }
@@ -126,12 +126,12 @@ impl Context {
                     *old_value = value;
                     return Ok(())
                 } else {
-                    todo!("immutable")
+                    return Err(Error::Immutable(id))
                 }
                 None => {}
             }
         }
-        todo!("not defined")
+        Err(Error::NotDefined(id))
     }
     pub fn get_var(&self, id: &String) -> Option<&Value> {
         match self.get_scope_var(id) {
@@ -162,5 +162,30 @@ impl Context {
     }
     pub fn get_fn_mut(&mut self, id: &String, pattern: &Vec<Type>) -> Option<&mut Function> {
         self.get_scope_fn_mut(id, pattern)?.get_fn_mut(id, pattern)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Return { None, Return }
+pub fn interpret(node: &Node, context: &mut Context) -> Result<(Value, Return), Error> {
+    match node {
+        Node::Int { v, pos } => if *v <= std::isize::MAX as i64 && *v >= std::isize::MIN as i64 {
+            Ok((Value::Int(*v as isize), Return::None))
+        } else {
+            Ok((Value::Int64(*v), Return::None))
+        }
+        Node::Float { v, pos } => if *v <= std::f32::MAX as f64 && *v >= std::f32::MIN as f64 {
+            Ok((Value::Float(*v as f32), Return::None))
+        } else {
+            Ok((Value::Float64(*v), Return::None))
+        }
+        Node::Bool { v, pos } => Ok((Value::Bool(*v), Return::None)),
+        Node::String { v, pos } => Ok((Value::String(v.clone()), Return::None)),
+        Node::Type { v, pos } => Ok((Value::Type(v.clone()), Return::None)),
+        Node::Word { v, pos } => match context.get_var(v) {
+            Some(v) => Ok((v.clone(), Return::None)),
+            None => Err(Error::NotDefined(v.clone()))
+        }
+        _ => todo!("{node}")
     }
 }

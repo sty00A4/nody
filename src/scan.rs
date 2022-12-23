@@ -6,7 +6,7 @@ pub type NodeRef = Box<Node>;
 #[derive(Clone, Debug)]
 pub enum Node {
     Int { v: i64, pos: Position }, Float{ v: f64, pos: Position },
-    Bool { v: bool, pos: Position }, String { v: String, pos: Position }, Null { pos: Position },
+    Bool { v: bool, pos: Position }, String { v: String, pos: Position },
     Type { v: Type, pos: Position },
     Word { v: String, pos: Position }, Key { v: String, pos: Position },
     Node { head: NodeRef, args: Vec<NodeRef>, pos: Position }, Body { nodes: Vec<Node>, pos: Position },
@@ -20,7 +20,6 @@ impl Display for Node {
             Node::Float { v, pos }          => write!(f, "{v:?}"),
             Node::Bool { v, pos }           => write!(f, "{v:?}"),
             Node::String { v, pos }         => write!(f, "{v:?}"),
-            Node::Null { pos }              => write!(f, "null"),
             Node::Type { v, pos }           => write!(f, "{v:?}"),
             Node::Word { v, pos }           => write!(f, "{v}"),
             Node::Key { v, pos }            => write!(f, "@{v}"),
@@ -156,9 +155,19 @@ impl Scanner {
                         number.push_str(self.get());
                         self.advance();
                     }
-                    Ok(Node::Float { v: number.parse().unwrap(), pos: Position::new(start_ln..self.ln, start_col..self.col, &self.path) })
+                    match number.parse() {
+                        Ok(number) => Ok(Node::Float { v: number, pos: Position::new(start_ln..self.ln, start_col..self.col, &self.path) }),
+                        Err(e) => Err(Error::ParseFloat(number))
+                    }
                 } else {
-                    Ok(Node::Int { v: number.parse().unwrap(), pos: Position::new(start_ln..self.ln, start_col..self.col, &self.path) })
+                    match number.parse() {
+                        Ok(number) => Ok(Node::Int { v: number, pos: Position::new(start_ln..self.ln, start_col..self.col, &self.path) }),
+                        Err(e) => match e.kind() {
+                            IntErrorKind::PosOverflow => Err(Error::ParseIntOverflow(number)),
+                            IntErrorKind::NegOverflow => Err(Error::ParseIntNegOverflow(number)),
+                            _ => Err(Error::ParseInt(number)),
+                        }
+                    }
                 }
             }
             _ => {
@@ -170,6 +179,8 @@ impl Scanner {
                 }
                 let pos = Position::new(start_ln..self.ln, start_col..self.col, &self.path);
                 match word.as_str() {
+                    "true"    => Ok(Node::Bool { v: true, pos }),
+                    "false"   => Ok(Node::Bool { v: false, pos }),
                     "int"     => Ok(Node::Type { v: Type::Int, pos }),
                     "int8"    => Ok(Node::Type { v: Type::Int8, pos }),
                     "int16"   => Ok(Node::Type { v: Type::Int16, pos }),
@@ -182,6 +193,8 @@ impl Scanner {
                     "uint32"  => Ok(Node::Type { v: Type::UInt32, pos }),
                     "uint64"  => Ok(Node::Type { v: Type::UInt64, pos }),
                     "uint128" => Ok(Node::Type { v: Type::UInt128, pos }),
+                    "float"   => Ok(Node::Type { v: Type::Float, pos }),
+                    "float64" => Ok(Node::Type { v: Type::Float64, pos }),
                     "char"    => Ok(Node::Type { v: Type::Char, pos }),
                     "bool"    => Ok(Node::Type { v: Type::Bool, pos }),
                     "str"     => Ok(Node::Type { v: Type::String, pos }),

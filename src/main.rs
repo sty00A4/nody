@@ -10,6 +10,7 @@ use interpret::*;
 use std::ops::Range;
 use std::collections::HashMap;
 use std::fmt::{Debug, Display};
+use core::num::IntErrorKind;
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
@@ -18,8 +19,14 @@ fn main() {
     match args.next() {
         Some(path) => match std::fs::read_to_string(path) {
             Ok(text) => match scan_file(path, text) {
-                Ok(node) => println!("{node}"),
-                Err(e) => println!("{e:?}")
+                Ok(node) => {
+                    let mut context = Context::new();
+                    match interpret(&node, &mut context) {
+                        Ok((value, ret)) => println!("{value}"),
+                        Err(e) => eprintln!("{e}")
+                    }
+                }
+                Err(e) => println!("{e}")
             }
             Err(e) => eprintln!("{e}")
         }
