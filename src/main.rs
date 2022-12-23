@@ -22,7 +22,7 @@ fn main() {
                 Ok(node) => {
                     let mut context = Context::new();
                     match interpret(&node, &mut context) {
-                        Ok((value, ret)) => println!("{value}"),
+                        Ok((value, ret)) => if let Some(value) = value { println!("{value}") }
                         Err(e) => eprintln!("{e}")
                     }
                 }

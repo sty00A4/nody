@@ -167,24 +167,36 @@ impl Context {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Return { None, Return }
-pub fn interpret(node: &Node, context: &mut Context) -> Result<(Value, Return), Error> {
+pub fn interpret(node: &Node, context: &mut Context) -> Result<(Option<Value>, Return), Error> {
     match node {
         Node::Int { v, pos } => if *v <= std::isize::MAX as i64 && *v >= std::isize::MIN as i64 {
-            Ok((Value::Int(*v as isize), Return::None))
+            Ok((Some(Value::Int(*v as isize)), Return::None))
         } else {
-            Ok((Value::Int64(*v), Return::None))
+            Ok((Some(Value::Int64(*v)), Return::None))
         }
         Node::Float { v, pos } => if *v <= std::f32::MAX as f64 && *v >= std::f32::MIN as f64 {
-            Ok((Value::Float(*v as f32), Return::None))
+            Ok((Some(Value::Float(*v as f32)), Return::None))
         } else {
-            Ok((Value::Float64(*v), Return::None))
+            Ok((Some(Value::Float64(*v)), Return::None))
         }
-        Node::Bool { v, pos } => Ok((Value::Bool(*v), Return::None)),
-        Node::String { v, pos } => Ok((Value::String(v.clone()), Return::None)),
-        Node::Type { v, pos } => Ok((Value::Type(v.clone()), Return::None)),
+        Node::Bool { v, pos } => Ok((Some(Value::Bool(*v)), Return::None)),
+        Node::String { v, pos } => Ok((Some(Value::String(v.clone())), Return::None)),
+        Node::Type { v, pos } => Ok((Some(Value::Type(v.clone())), Return::None)),
         Node::Word { v, pos } => match context.get_var(v) {
-            Some(v) => Ok((v.clone(), Return::None)),
+            Some(v) => Ok((Some(v.clone()), Return::None)),
             None => Err(Error::NotDefined(v.clone()))
+        }
+        Node::Body { nodes, pos } => {
+            context.push();
+            for node in nodes.iter() {
+                let (value, ret) = interpret(node, context)?;
+                if ret != Return::None {
+                    context.pop();
+                    return Ok((value, ret))
+                }
+            }
+            context.pop();
+            Ok((None, Return::None))
         }
         _ => todo!("{node}")
     }
