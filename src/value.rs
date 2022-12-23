@@ -106,8 +106,8 @@ impl Debug for Type {
             Self::UInt128       => "uint128".to_string(),
             Self::Char          => "char".to_string(),
             Self::Bool          => "bool".to_string(),
-            Self::String        => "string".to_string(),
-            Self::Vector(t)     => if let Some(t) = t { format!("vector<{t:?}>") } else { format!("vector") }
+            Self::String        => "str".to_string(),
+            Self::Vector(t)     => if let Some(t) = t { format!("vec<{t:?}>") } else { format!("vec") }
             Self::Function(p)   => format!("fn({p:?})"),
             Self::Type          => "type".to_string()
         })
