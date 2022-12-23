@@ -1,7 +1,7 @@
 use crate::*;
 
 pub const WS: [&str; 4] = [" ", "\r", "\t", "\n"];
-pub const SYMBOLS: [&str; 9] = ["(", ")", "[", "]", "{", "}", "@", "#", "$"];
+pub const SYMBOLS: [&str; 10] = ["(", ")", "[", "]", "{", "}", "@", "#", "$", "\""];
 pub type NodeRef = Box<Node>;
 #[derive(Clone, Debug)]
 pub enum Node {
@@ -128,6 +128,20 @@ impl Scanner {
                 self.advance(); self.advance_ws();
                 let node = self.node()?;
                 Ok(Node::Params { node: Box::new(node), pos: Position::new(start_ln..self.ln, start_col..self.col, &self.path) })
+            }
+            "\"" => {
+                let (start_ln, start_col) = (self.ln, self.col);
+                self.advance();
+                let mut string = String::new();
+                while self.get() != "\"" && self.get() != "" {
+                    string.push_str(self.get());
+                    self.advance();
+                }
+                self.advance();
+                Ok(Node::String {
+                    v: string.replace("\\n", "\n").replace("\\t", "\t").replace("\\r", "\r"),
+                    pos: Position::new(start_ln..self.ln, start_col..self.col, &self.path)
+                })
             }
             _ if self.get_char().is_ascii_digit() => {
                 let (start_ln, start_col) = (self.ln, self.col);
