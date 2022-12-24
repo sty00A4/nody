@@ -34,9 +34,11 @@ pub fn interpret(node: &Node, context: &mut Context) -> Result<(Option<Value>, R
         Node::Node { head, args, pos } => if let Some(head) = interpret(head, context)?.0 {
             match head {
                 Value::Function(_) => {
+                    todo!("call function");
                     Ok((None, Return::None))
                 }
                 Value::NativFunction(_) => {
+                    todo!("call nativ-function");
                     Ok((None, Return::None))
                 }
                 _ => Err(Error::ExpectedTypes(
