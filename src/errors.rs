@@ -13,6 +13,7 @@ impl Position {
 pub enum Error {
     ParseFloat(String), ParseInt(String), ParseIntOverflow(String), ParseIntNegOverflow(String),
     NotDefined(String), AlreadyDefined(String), Immutable(String),
+    Expected, ExpectedType(Type, Type), ExpectedTypes(Vec<Type>, Type),
 }
 impl Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -24,6 +25,10 @@ impl Display for Error {
             Self::NotDefined(id) => write!(f, "ERROR: {id:?} is not defined"),
             Self::AlreadyDefined(id) => write!(f, "ERROR: {id:?} is already defined"),
             Self::Immutable(id) => write!(f, "ERROR: {id:?} is immutable"),
+            Self::Expected => write!(f, "ERROR: expected a value for the head"),
+            Self::ExpectedType(t1, t2) => write!(f, "ERROR: expected {t1}, got {t2}"),
+            Self::ExpectedTypes(t, t2) => write!(f, "ERROR: expected {}, got {t2}",
+            t.iter().map(|x| x.to_string()).collect::<Vec<String>>().join("|")),
         }
     }
 }

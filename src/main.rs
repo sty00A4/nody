@@ -1,13 +1,15 @@
 #![allow(unused)]
 mod errors;
 mod value;
+mod context;
 mod scan;
 mod interpret;
 use errors::*;
 use value::*;
+use context::*;
 use scan::*;
 use interpret::*;
-use std::ops::Range;
+use std::ops::{Range, Add, Sub, Mul, Div};
 use std::collections::HashMap;
 use std::fmt::{Debug, Display};
 use core::num::IntErrorKind;
@@ -20,7 +22,7 @@ fn main() {
         Some(path) => match std::fs::read_to_string(path) {
             Ok(text) => match scan_file(path, text) {
                 Ok(node) => {
-                    let mut context = Context::new();
+                    let mut context = std_context();
                     match interpret(&node, &mut context) {
                         Ok((value, ret)) => if let Some(value) = value { println!("{value}") }
                         Err(e) => eprintln!("{e}")
