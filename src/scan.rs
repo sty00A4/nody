@@ -13,21 +13,39 @@ pub enum Node {
     Vector { nodes: Vec<Node>, pos: Position },
     Closure { node: NodeRef, pos: Position }, Params { node: NodeRef, pos: Position }
 }
+impl Node {
+    pub fn pos(&self) -> &Position {
+        match self {
+            Node::Int { v:_, pos }              => pos,
+            Node::Float { v:_, pos }            => pos,
+            Node::Bool { v:_, pos }             => pos,
+            Node::String { v:_, pos }           => pos,
+            Node::Type { v:_, pos }             => pos,
+            Node::Word { v:_, pos }             => pos,
+            Node::Key { v:_, pos }              => pos,
+            Node::Node { head:_, args:_, pos }  => pos,
+            Node::Body { nodes:_, pos }         => pos,
+            Node::Vector { nodes:_, pos }       => pos,
+            Node::Closure { node:_, pos }       => pos,
+            Node::Params { node:_, pos }        => pos
+        }
+    }
+}
 impl Display for Node {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Node::Int { v, pos }            => write!(f, "{v:?}"),
-            Node::Float { v, pos }          => write!(f, "{v:?}"),
-            Node::Bool { v, pos }           => write!(f, "{v:?}"),
-            Node::String { v, pos }         => write!(f, "{v:?}"),
-            Node::Type { v, pos }           => write!(f, "{v:?}"),
-            Node::Word { v, pos }           => write!(f, "{v}"),
-            Node::Key { v, pos }            => write!(f, "@{v}"),
-            Node::Node { head, args, pos }  => write!(f, "({head} {})", args.iter().map(|x| x.to_string()).collect::<Vec<String>>().join(" ")),
-            Node::Body { nodes, pos }       => write!(f, "{{{}}}", nodes.iter().map(|x| x.to_string()).collect::<Vec<String>>().join(" ")),
-            Node::Vector { nodes, pos }     => write!(f, "[{}]", nodes.iter().map(|x| x.to_string()).collect::<Vec<String>>().join(" ")),
-            Node::Closure { node, pos }     => write!(f, "#{node}"),
-            Node::Params { node, pos }     => write!(f, "${node}"),
+            Node::Int { v, pos:_ }            => write!(f, "{v:?}"),
+            Node::Float { v, pos:_ }          => write!(f, "{v:?}"),
+            Node::Bool { v, pos:_ }           => write!(f, "{v:?}"),
+            Node::String { v, pos:_ }         => write!(f, "{v:?}"),
+            Node::Type { v, pos:_ }           => write!(f, "{v:?}"),
+            Node::Word { v, pos:_ }           => write!(f, "{v}"),
+            Node::Key { v, pos:_ }            => write!(f, "@{v}"),
+            Node::Node { head, args, pos:_ }  => write!(f, "({head} {})", args.iter().map(|x| x.to_string()).collect::<Vec<String>>().join(" ")),
+            Node::Body { nodes, pos:_ }       => write!(f, "{{{}}}", nodes.iter().map(|x| x.to_string()).collect::<Vec<String>>().join(" ")),
+            Node::Vector { nodes, pos:_ }     => write!(f, "[{}]", nodes.iter().map(|x| x.to_string()).collect::<Vec<String>>().join(" ")),
+            Node::Closure { node, pos:_ }     => write!(f, "#{node}"),
+            Node::Params { node, pos:_ }     => write!(f, "${node}"),
         }
     }
 }
@@ -150,6 +168,7 @@ impl Scanner {
                     self.advance();
                 }
                 if self.get() == "." {
+                    number.push('.');
                     self.advance();
                     while self.get_char().is_ascii_digit() {
                         number.push_str(self.get());
@@ -157,7 +176,7 @@ impl Scanner {
                     }
                     match number.parse() {
                         Ok(number) => Ok(Node::Float { v: number, pos: Position::new(start_ln..self.ln, start_col..self.col, &self.path) }),
-                        Err(e) => Err(Error::ParseFloat(number))
+                        Err(_) => Err(Error::ParseFloat(number))
                     }
                 } else {
                     match number.parse() {

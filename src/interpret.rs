@@ -4,22 +4,16 @@ use crate::*;
 pub enum Return { None, Return }
 pub fn interpret(node: &Node, context: &mut Context) -> Result<(Option<Value>, Return), Error> {
     match node {
-        Node::Int { v, pos } => Ok((Some(Value::Int(*v)), Return::None)),
-        Node::Float { v, pos } => Ok((Some(Value::Float(*v)), Return::None)),
-        Node::Bool { v, pos } => Ok((Some(Value::Bool(*v)), Return::None)),
-        Node::String { v, pos } => Ok((Some(Value::String(v.clone())), Return::None)),
-        Node::Type { v, pos } => Ok((Some(Value::Type(v.clone())), Return::None)),
-        Node::Word { v, pos } => match context.get_var(v) {
+        Node::Int { v, pos:_ } => Ok((Some(Value::Int(*v)), Return::None)),
+        Node::Float { v, pos:_ } => Ok((Some(Value::Float(*v)), Return::None)),
+        Node::Bool { v, pos:_ } => Ok((Some(Value::Bool(*v)), Return::None)),
+        Node::String { v, pos:_ } => Ok((Some(Value::String(v.clone())), Return::None)),
+        Node::Type { v, pos:_ } => Ok((Some(Value::Type(v.clone())), Return::None)),
+        Node::Word { v, pos:_ } => match context.get_var(v) {
             Some(v) => Ok((Some(v.clone()), Return::None)),
-            None => match context.get_fn_first(v) {
-                Some(func) => Ok((Some(Value::Function(func.clone())), Return::None)),
-                None => match context.get_nativ_fn_first(v) {
-                    Some(func) => Ok((Some(Value::NativFunction(func.clone())), Return::None)),
-                    None => Err(Error::NotDefined(v.clone()))
-                }
-            }
+            None => Err(Error::NotDefined(v.clone()))
         }
-        Node::Body { nodes, pos } => {
+        Node::Body { nodes, pos:_ } => {
             context.push();
             for node in nodes.iter() {
                 let (value, ret) = interpret(node, context)?;
@@ -31,23 +25,43 @@ pub fn interpret(node: &Node, context: &mut Context) -> Result<(Option<Value>, R
             context.pop();
             Ok((None, Return::None))
         }
-        Node::Node { head, args, pos } => if let Some(head) = interpret(head, context)?.0 {
-            match head {
-                Value::Function(_) => {
-                    todo!("call function");
-                    Ok((None, Return::None))
+        Node::Node { head, args, pos:_ } => {
+            let mut values: Vec<Value> = vec![];
+            let mut types: Vec<Type> = vec![];
+            let mut poses: Vec<Position> = vec![];
+            for arg in args.iter() {
+                if let (Some(value), _) = interpret(arg, context)? {
+                    poses.push(arg.pos().clone());
+                    types.push(value.typ());
+                    values.push(value);
+                } else {
+                    return Err(Error::Expected)
                 }
-                Value::NativFunction(_) => {
-                    todo!("call nativ-function");
-                    Ok((None, Return::None))
-                }
-                _ => Err(Error::ExpectedTypes(
-                    vec![Type::Function(vec![], None), Type::NativFunction(vec![], None)],
-                    head.typ()
-                ))
             }
-        } else {
-            Err(Error::Expected)
+            if let Node::Word { v, pos:_ } = head.as_ref() {
+                match context.get_native_fn(v, &types) {
+                    Some(func) => {
+                        let mut func_context = Context::call(context);
+                        func_context.create_params(&func.params, values, poses)?;
+                        let value = (func.body)(&mut func_context)?;
+                        return Ok((value, Return::None))
+                    }
+                    None => match context.get_fn(v, &types) {
+                        Some(func) => {
+                            let mut func_context = Context::call(context);
+                            func_context.create_params(&func.params, values, poses)?;
+                            let (value, _) = interpret(&func.body, &mut func_context)?;
+                            return Ok((value, Return::None))
+                        }
+                        None => {}
+                    }
+                }
+            }
+            if let Some(head_value) = interpret(head, context)?.0 {
+                todo!("value as head")
+            } else {
+                Err(Error::Expected)
+            }
         }
         _ => todo!("{node}")
     }

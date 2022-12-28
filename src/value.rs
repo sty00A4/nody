@@ -15,6 +15,15 @@ impl Function {
     pub fn return_type_boxed(&self) -> Option<Box<Type>> {
         if let Some(t) = &self.return_type { Some(Box::new(t.clone())) } else { None }
     }
+    pub fn pattern_match(&self, pattern: &Vec<Type>) -> bool {
+        if self.params.len() != pattern.len() { return false }
+        for i in 0..pattern.len() {
+            if &pattern[i] != &self.params[i].1 {
+                return false
+            }
+        }
+        true
+    }
 }
 impl Debug for Function {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -49,6 +58,15 @@ impl NativFunction {
     }
     pub fn return_type_boxed(&self) -> Option<Box<Type>> {
         if let Some(t) = &self.return_type { Some(Box::new(t.clone())) } else { None }
+    }
+    pub fn pattern_match(&self, pattern: &Vec<Type>) -> bool {
+        if self.params.len() != pattern.len() { return false }
+        for i in 0..pattern.len() {
+            if &pattern[i] != &self.params[i].1 {
+                return false
+            }
+        }
+        true
     }
 }
 impl Debug for NativFunction {
@@ -157,8 +175,8 @@ impl Display for Type {
             Self::Bool                => "bool".to_string(),
             Self::String              => "str".to_string(),
             Self::Vector(t)           => if let Some(t) = t { format!("vec<{t}>") } else { format!("vec") }
-            Self::Function(t, r)      => format!("fn({})", t.iter().map(|x| x.to_string()).collect::<Vec<String>>().join(" ")),
-            Self::NativFunction(t, r) => format!("nativ-fn({})", t.iter().map(|x| x.to_string()).collect::<Vec<String>>().join(" ")),
+            Self::Function(t, _)      => format!("fn({})", t.iter().map(|x| x.to_string()).collect::<Vec<String>>().join(" ")),
+            Self::NativFunction(t, _) => format!("nativ-fn({})", t.iter().map(|x| x.to_string()).collect::<Vec<String>>().join(" ")),
             Self::Object              => "obj".to_string(),
             Self::Type                => "type".to_string()
         })

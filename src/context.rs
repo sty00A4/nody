@@ -4,7 +4,7 @@ use crate::*;
 pub struct Scope {
     vars: HashMap<String, (Value, bool, Position)>,
     funcs: HashMap<String, Vec<(Function, Position)>>,
-    nativ_funcs: HashMap<String, Vec<(NativFunction, Position)>>,
+    native_funcs: HashMap<String, Vec<(NativFunction, Position)>>,
     subs: HashMap<String, Scope>
 }
 impl Scope {
@@ -12,7 +12,7 @@ impl Scope {
         Scope {
             vars: HashMap::new(),
             funcs: HashMap::new(),
-            nativ_funcs: HashMap::new(),
+            native_funcs: HashMap::new(),
             subs: HashMap::new()
         }
     }
@@ -42,21 +42,21 @@ impl Scope {
             Some(_) => Err(Error::AlreadyDefined(id))
         }
     }
-    pub fn create_nativ_fn(&mut self, id: String, func: NativFunction, pos: Position) -> Result<(), Error> {
-        match self.get_nativ_fn_mut(&id, &func.type_params()) {
-            None => if self.nativ_funcs.contains_key(&id) {
-                match self.nativ_funcs.get_mut(&id) {
+    pub fn create_native_fn(&mut self, id: String, func: NativFunction, pos: Position) -> Result<(), Error> {
+        match self.get_native_fn_mut(&id, &func.type_params()) {
+            None => if self.native_funcs.contains_key(&id) {
+                match self.native_funcs.get_mut(&id) {
                     Some(defs) => {
                         defs.push((func, pos));
                         Ok(())
                     }
                     None => {
-                        self.nativ_funcs.insert(id, vec![(func, pos)]);
+                        self.native_funcs.insert(id, vec![(func, pos)]);
                         Ok(())
                     }
                 }
             } else {
-                self.nativ_funcs.insert(id, vec![(func, pos)]);
+                self.native_funcs.insert(id, vec![(func, pos)]);
                 Ok(())
             }
             Some(_) => Err(Error::AlreadyDefined(id))
@@ -100,13 +100,27 @@ impl Scope {
     // get fn
     pub fn get_fn(&self, id: &String, pattern: &Vec<Type>) -> Option<&Function> {
         match self.funcs.get(id) {
-            Some(defs) => todo!("get_fn"),
+            Some(defs) => {
+                for (func, _) in defs.iter() {
+                    if func.pattern_match(pattern) {
+                        return Some(func)
+                    }
+                }
+                None
+            }
             None => None
         }
     }
     pub fn get_fn_mut(&mut self, id: &String, pattern: &Vec<Type>) -> Option<&mut Function> {
         match self.funcs.get_mut(id) {
-            Some(defs) => todo!("get_fn_mut"),
+            Some(defs) => {
+                for (func, _) in defs.iter_mut() {
+                    if func.pattern_match(pattern) {
+                        return Some(func)
+                    }
+                }
+                None
+            }
             None => None
         }
     }
@@ -122,27 +136,41 @@ impl Scope {
             None => None
         }
     }
-    // get nativ fn
-    pub fn get_nativ_fn(&self, id: &String, pattern: &Vec<Type>) -> Option<&NativFunction> {
-        match self.nativ_funcs.get(id) {
-            Some(defs) => todo!("get_nativ_fn"),
+    // get native fn
+    pub fn get_native_fn(&self, id: &String, pattern: &Vec<Type>) -> Option<&NativFunction> {
+        match self.native_funcs.get(id) {
+            Some(defs) => {
+                for (func, _) in defs.iter() {
+                    if func.pattern_match(pattern) {
+                        return Some(func)
+                    }
+                }
+                None
+            }
             None => None
         }
     }
-    pub fn get_nativ_fn_mut(&mut self, id: &String, pattern: &Vec<Type>) -> Option<&mut NativFunction> {
-        match self.nativ_funcs.get_mut(id) {
-            Some(defs) => todo!("get_nativ_fn_mut"),
+    pub fn get_native_fn_mut(&mut self, id: &String, pattern: &Vec<Type>) -> Option<&mut NativFunction> {
+        match self.native_funcs.get_mut(id) {
+            Some(defs) => {
+                for (func, _) in defs.iter_mut() {
+                    if func.pattern_match(pattern) {
+                        return Some(func)
+                    }
+                }
+                None
+            }
             None => None
         }
     }
-    pub fn get_nativ_fn_first(&self, id: &String) -> Option<&NativFunction> {
-        match self.nativ_funcs.get(id) {
+    pub fn get_native_fn_first(&self, id: &String) -> Option<&NativFunction> {
+        match self.native_funcs.get(id) {
             Some(defs) => Some(&defs.first().unwrap().0),
             None => None
         }
     }
-    pub fn get_nativ_fn_first_mut(&mut self, id: &String) -> Option<&mut NativFunction> {
-        match self.nativ_funcs.get_mut(id) {
+    pub fn get_native_fn_first_mut(&mut self, id: &String) -> Option<&mut NativFunction> {
+        match self.native_funcs.get_mut(id) {
             Some(defs) => Some(&mut defs.first_mut().unwrap().0),
             None => None
         }
@@ -159,6 +187,9 @@ pub struct Context {
 }
 impl Context {
     pub fn new() -> Self { Self { scopes: vec![Scope::new()], global: Scope::new(), trace: vec![] } }
+    pub fn call(context: &Context) -> Self {
+        Self { scopes: vec![Scope::new()], global: context.global.clone(), trace: context.trace.clone() }
+    }
     pub fn push(&mut self) { self.scopes.push(Scope::new()) }
     pub fn pop(&mut self) -> Option<Scope> { self.scopes.pop() }
     pub fn trace_push(&mut self, pos: &Position) { self.trace.push(pos.clone()); }
@@ -193,47 +224,19 @@ impl Context {
         if self.global.get_fn_mut(id, pattern).is_some() { return Some(&mut self.global) }
         None
     }
-    pub fn get_scope_fn_first(&self, id: &String) -> Option<&Scope> {
+    // scope of native fn
+    pub fn get_scope_native_fn(&self, id: &String, pattern: &Vec<Type>) -> Option<&Scope> {
         for scope in self.scopes.iter() {
-            if scope.get_fn_first(id).is_some() { return Some(scope) }
+            if scope.get_native_fn(id, pattern).is_some() { return Some(scope) }
         }
-        if self.global.get_fn_first(id).is_some() { return Some(&self.global) }
+        if self.global.get_native_fn(id, pattern).is_some() { return Some(&self.global) }
         None
     }
-    pub fn get_scope_fn_first_mut(&mut self, id: &String) -> Option<&mut Scope> {
+    pub fn get_scope_native_fn_mut(&mut self, id: &String, pattern: &Vec<Type>) -> Option<&mut Scope> {
         for scope in self.scopes.iter_mut() {
-            if scope.get_fn_first_mut(id).is_some() { return Some(scope) }
+            if scope.get_native_fn_mut(id, pattern).is_some() { return Some(scope) }
         }
-        if self.global.get_fn_first_mut(id).is_some() { return Some(&mut self.global) }
-        None
-    }
-    // scope of nativ fn
-    pub fn get_scope_nativ_fn(&self, id: &String, pattern: &Vec<Type>) -> Option<&Scope> {
-        for scope in self.scopes.iter() {
-            if scope.get_nativ_fn(id, pattern).is_some() { return Some(scope) }
-        }
-        if self.global.get_nativ_fn(id, pattern).is_some() { return Some(&self.global) }
-        None
-    }
-    pub fn get_scope_nativ_fn_mut(&mut self, id: &String, pattern: &Vec<Type>) -> Option<&mut Scope> {
-        for scope in self.scopes.iter_mut() {
-            if scope.get_nativ_fn_mut(id, pattern).is_some() { return Some(scope) }
-        }
-        if self.global.get_nativ_fn_mut(id, pattern).is_some() { return Some(&mut self.global) }
-        None
-    }
-    pub fn get_scope_nativ_fn_first(&self, id: &String) -> Option<&Scope> {
-        for scope in self.scopes.iter() {
-            if scope.get_nativ_fn_first(id).is_some() { return Some(scope) }
-        }
-        if self.global.get_nativ_fn_first(id).is_some() { return Some(&self.global) }
-        None
-    }
-    pub fn get_scope_nativ_fn_first_mut(&mut self, id: &String) -> Option<&mut Scope> {
-        for scope in self.scopes.iter_mut() {
-            if scope.get_nativ_fn_first_mut(id).is_some() { return Some(scope) }
-        }
-        if self.global.get_nativ_fn_first_mut(id).is_some() { return Some(&mut self.global) }
+        if self.global.get_native_fn_mut(id, pattern).is_some() { return Some(&mut self.global) }
         None
     }
     
@@ -250,8 +253,15 @@ impl Context {
             Some(scope) => scope.create_fn(id, func, pos)
         }
     }
-    pub fn create_nativ_fn(&mut self, id: String, func: NativFunction, pos: Position) -> Result<(), Error> {
-        self.global.create_nativ_fn(id, func, pos)
+    pub fn create_native_fn(&mut self, id: String, func: NativFunction, pos: Position) -> Result<(), Error> {
+        self.global.create_native_fn(id, func, pos)
+    }
+    pub fn create_params(&mut self, params: &Vec<(String, Type)>, values: Vec<Value>, poses: Vec<Position>) -> Result<(), Error> {
+        for i in 0..min(params.len(), values.len()) {
+            let (param, param_type) = &params[i];
+            self.create_var(param.clone(), values[i].clone(), false, poses[i].clone())?;
+        }
+        Ok(())
     }
     
     pub fn del_var(&mut self, id: &String) -> Option<(Value, bool, Position)> {
@@ -313,24 +323,12 @@ impl Context {
     pub fn get_fn_mut(&mut self, id: &String, pattern: &Vec<Type>) -> Option<&mut Function> {
         self.get_scope_fn_mut(id, pattern)?.get_fn_mut(id, pattern)
     }
-    pub fn get_fn_first(&self, id: &String) -> Option<&Function> {
-        self.get_scope_fn_first(id)?.get_fn_first(id)
+    // get native fn
+    pub fn get_native_fn(&self, id: &String, pattern: &Vec<Type>) -> Option<&NativFunction> {
+        self.get_scope_native_fn(id, pattern)?.get_native_fn(id, pattern)
     }
-    pub fn get_fn_first_mut(&mut self, id: &String) -> Option<&mut Function> {
-        self.get_scope_fn_first_mut(id)?.get_fn_first_mut(id)
-    }
-    // get nativ fn
-    pub fn get_nativ_fn(&self, id: &String, pattern: &Vec<Type>) -> Option<&NativFunction> {
-        self.get_scope_nativ_fn(id, pattern)?.get_nativ_fn(id, pattern)
-    }
-    pub fn get_nativ_fn_mut(&mut self, id: &String, pattern: &Vec<Type>) -> Option<&mut NativFunction> {
-        self.get_scope_nativ_fn_mut(id, pattern)?.get_nativ_fn_mut(id, pattern)
-    }
-    pub fn get_nativ_fn_first(&self, id: &String) -> Option<&NativFunction> {
-        self.get_scope_nativ_fn_first(id)?.get_nativ_fn_first(id)
-    }
-    pub fn get_nativ_fn_first_mut(&mut self, id: &String) -> Option<&mut NativFunction> {
-        self.get_scope_nativ_fn_first_mut(id)?.get_nativ_fn_first_mut(id)
+    pub fn get_native_fn_mut(&mut self, id: &String, pattern: &Vec<Type>) -> Option<&mut NativFunction> {
+        self.get_scope_native_fn_mut(id, pattern)?.get_native_fn_mut(id, pattern)
     }
 }
 
@@ -364,17 +362,18 @@ fn _add_str(context: &mut Context) -> Result<Option<Value>, Error> {
 pub fn std_context() -> Context {
     let mut context = Context::new();
     let pos = Position::new(0..0, 0..0, &String::from("<STD>"));
-    context.create_nativ_fn(String::from("+"), NativFunction {
+    // +
+    context.create_native_fn(String::from("+"), NativFunction {
         params: vec![("a".to_string(), Type::Int), ("b".to_string(), Type::Int)],
         return_type: Some(Type::Int),
         body: _add_int
     }, pos.clone());
-    context.create_nativ_fn(String::from("+"), NativFunction {
+    context.create_native_fn(String::from("+"), NativFunction {
         params: vec![("a".to_string(), Type::Float), ("b".to_string(), Type::Float)],
         return_type: Some(Type::Float),
         body: _add_float
     }, pos.clone());
-    context.create_nativ_fn(String::from("+"), NativFunction {
+    context.create_native_fn(String::from("+"), NativFunction {
         params: vec![("a".to_string(), Type::String), ("b".to_string(), Type::String)],
         return_type: Some(Type::String),
         body: _add_str
