@@ -53,7 +53,10 @@ pub fn interpret(node: &Node, context: &mut Context) -> Result<(Option<Value>, R
                             let (value, _) = interpret(&func.body, &mut func_context)?;
                             return Ok((value, Return::None))
                         }
-                        None => {}
+                        None => match context.get_var(v) {
+                            Some(_) => {}
+                            None => return Err(Error::FunctionPatternNotFound(v.clone(), types))
+                        }
                     }
                 }
             }

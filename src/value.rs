@@ -2,24 +2,32 @@ use crate::*;
 
 #[derive(Clone)]
 pub struct Function {
-    pub params: Vec<(String, Type)>,
+    pub params: Vec<(String, Type, bool)>,
     pub return_type: Option<Type>,
     pub body: NodeRef
 }
 impl Function {
     pub fn type_params(&self) -> Vec<Type> {
         let mut types: Vec<Type> = vec![];
-        for (_, typ) in self.params.iter() { types.push(typ.clone()); }
+        for (_, typ, more) in self.params.iter() { types.push(typ.clone()); }
         types
     }
     pub fn return_type_boxed(&self) -> Option<Box<Type>> {
         if let Some(t) = &self.return_type { Some(Box::new(t.clone())) } else { None }
     }
     pub fn pattern_match(&self, pattern: &Vec<Type>) -> bool {
-        if self.params.len() != pattern.len() { return false }
-        for i in 0..pattern.len() {
-            if &pattern[i] != &self.params[i].1 {
-                return false
+        let mut pattern_idx: usize = 0;
+        for i in 0..self.params.len() {
+            if pattern.get(pattern_idx) == None { return false }
+            let (_, param_type, more) = &self.params[i];
+            if *more {
+                while let Some(typ) = pattern.get(pattern_idx) {
+                    if typ != param_type { return false }
+                    pattern_idx += 1;
+                }
+            } else {
+                if &pattern[pattern_idx] != param_type { return false }
+                pattern_idx += 1;
             }
         }
         true
@@ -27,12 +35,12 @@ impl Function {
 }
 impl Debug for Function {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "fn({})", self.params.iter().map(|(_, typ)| typ.to_string()).collect::<Vec<String>>().join(" "))
+        write!(f, "fn({})", self.params.iter().map(|(_, typ, more)| typ.to_string()).collect::<Vec<String>>().join(" "))
     }
 }
 impl Display for Function {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "fn({})", self.params.iter().map(|(_, typ)| typ.to_string()).collect::<Vec<String>>().join(" "))
+        write!(f, "fn({})", self.params.iter().map(|(_, typ, more)| typ.to_string()).collect::<Vec<String>>().join(" "))
     }
 }
 impl PartialEq for Function {
@@ -46,24 +54,32 @@ impl PartialEq for Function {
 }
 #[derive(Clone)]
 pub struct NativFunction {
-    pub params: Vec<(String, Type)>,
+    pub params: Vec<(String, Type, bool)>,
     pub return_type: Option<Type>,
     pub body: fn(&mut Context) -> Result<Option<Value>, Error>
 }
 impl NativFunction {
     pub fn type_params(&self) -> Vec<Type> {
         let mut types: Vec<Type> = vec![];
-        for (_, typ) in self.params.iter() { types.push(typ.clone()); }
+        for (_, typ, _) in self.params.iter() { types.push(typ.clone()); }
         types
     }
     pub fn return_type_boxed(&self) -> Option<Box<Type>> {
         if let Some(t) = &self.return_type { Some(Box::new(t.clone())) } else { None }
     }
     pub fn pattern_match(&self, pattern: &Vec<Type>) -> bool {
-        if self.params.len() != pattern.len() { return false }
-        for i in 0..pattern.len() {
-            if &pattern[i] != &self.params[i].1 {
-                return false
+        let mut pattern_idx: usize = 0;
+        for i in 0..self.params.len() {
+            if pattern.get(pattern_idx) == None { return false }
+            let (_, param_type, more) = &self.params[i];
+            if *more {
+                while let Some(typ) = pattern.get(pattern_idx) {
+                    if typ != param_type { return false }
+                    pattern_idx += 1;
+                }
+            } else {
+                if &pattern[pattern_idx] != param_type { return false }
+                pattern_idx += 1;
             }
         }
         true
@@ -71,12 +87,12 @@ impl NativFunction {
 }
 impl Debug for NativFunction {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "nativ-fn({})", self.params.iter().map(|(_, typ)| typ.to_string()).collect::<Vec<String>>().join(" "))
+        write!(f, "nativ-fn({})", self.params.iter().map(|(_, typ, more)| typ.to_string()).collect::<Vec<String>>().join(" "))
     }
 }
 impl Display for NativFunction {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "nativ-fn({})", self.params.iter().map(|(_, typ)| typ.to_string()).collect::<Vec<String>>().join(" "))
+        write!(f, "nativ-fn({})", self.params.iter().map(|(_, typ, more)| typ.to_string()).collect::<Vec<String>>().join(" "))
     }
 }
 impl PartialEq for NativFunction {
