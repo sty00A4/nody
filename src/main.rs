@@ -23,7 +23,13 @@ fn main() {
         Some(path) => match std::fs::read_to_string(path) {
             Ok(text) => match scan_file(path, text) {
                 Ok(node) => {
-                    let mut context = std_context();
+                    let mut context = match std_context() {
+                        Ok(context) => context,
+                        Err(e) => {
+                            println!("{e}");
+                            Context::new()
+                        }
+                    };
                     match interpret(&node, &mut context) {
                         Ok((value, _)) => if let Some(value) = value { println!("{value}") }
                         Err(e) => eprintln!("{e}")

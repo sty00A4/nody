@@ -30,7 +30,7 @@ impl Function {
                 pattern_idx += 1;
             }
         }
-        true
+        pattern.get(pattern_idx) == None
     }
 }
 impl Debug for Function {
@@ -73,6 +73,8 @@ impl NativFunction {
             if pattern.get(pattern_idx) == None { return false }
             let (_, param_type, more) = &self.params[i];
             if *more {
+                if &pattern[pattern_idx] != param_type { return false }
+                pattern_idx += 1;
                 while let Some(typ) = pattern.get(pattern_idx) {
                     if typ != param_type { return false }
                     pattern_idx += 1;
@@ -82,17 +84,26 @@ impl NativFunction {
                 pattern_idx += 1;
             }
         }
+        pattern.get(pattern_idx) == None
+    }
+    pub fn params_match(&self, params: &Vec<(String, Type, bool)>) -> bool {
+        for i in 0..self.params.len() {
+            if params.get(i) == None { return false }
+            let (_, param_type1, more1) = &self.params[i];
+            let (_, param_type2, more2) = &params[i];
+            if param_type1 != param_type2 || more1 != more2 { return false }
+        }
         true
     }
 }
 impl Debug for NativFunction {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "nativ-fn({})", self.params.iter().map(|(_, typ, more)| typ.to_string()).collect::<Vec<String>>().join(" "))
+        write!(f, "native-fn({})", self.params.iter().map(|(_, typ, more)| typ.to_string()).collect::<Vec<String>>().join(" "))
     }
 }
 impl Display for NativFunction {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "nativ-fn({})", self.params.iter().map(|(_, typ, more)| typ.to_string()).collect::<Vec<String>>().join(" "))
+        write!(f, "native-fn({})", self.params.iter().map(|(_, typ, more)| typ.to_string()).collect::<Vec<String>>().join(" "))
     }
 }
 impl PartialEq for NativFunction {

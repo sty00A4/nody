@@ -43,7 +43,7 @@ impl Scope {
         }
     }
     pub fn create_native_fn(&mut self, id: String, func: NativFunction, pos: Position) -> Result<(), Error> {
-        match self.get_native_fn_mut(&id, &func.type_params()) {
+        match self.get_native_fn_params_mut(&id, &func.params) {
             None => if self.native_funcs.contains_key(&id) {
                 match self.native_funcs.get_mut(&id) {
                     Some(defs) => {
@@ -155,6 +155,32 @@ impl Scope {
             Some(defs) => {
                 for (func, _) in defs.iter_mut() {
                     if func.pattern_match(pattern) {
+                        return Some(func)
+                    }
+                }
+                None
+            }
+            None => None
+        }
+    }
+    pub fn get_native_fn_params(&self, id: &String, params: &Vec<(String, Type, bool)>) -> Option<&NativFunction> {
+        match self.native_funcs.get(id) {
+            Some(defs) => {
+                for (func, _) in defs.iter() {
+                    if func.params_match(params) {
+                        return Some(func)
+                    }
+                }
+                None
+            }
+            None => None
+        }
+    }
+    pub fn get_native_fn_params_mut(&mut self, id: &String, params: &Vec<(String, Type, bool)>) -> Option<&mut NativFunction> {
+        match self.native_funcs.get_mut(id) {
+            Some(defs) => {
+                for (func, _) in defs.iter_mut() {
+                    if func.params_match(params) {
                         return Some(func)
                     }
                 }
@@ -356,7 +382,7 @@ fn _add_int(context: &mut Context) -> Result<Option<Value>, Error> {
             }
         }
         Ok(Some(Value::Int(sum)))
-    } else { panic!("type checking doesn't work"); }
+    } else { panic!("type checking doesn't work") }
 }
 fn _add_float(context: &mut Context) -> Result<Option<Value>, Error> {
     let nums = context.get_var(&"nums".to_string()).unwrap();
@@ -368,7 +394,7 @@ fn _add_float(context: &mut Context) -> Result<Option<Value>, Error> {
             }
         }
         Ok(Some(Value::Float(sum)))
-    } else { panic!("type checking doesn't work"); }
+    } else { panic!("type checking doesn't work") }
 }
 fn _add_str(context: &mut Context) -> Result<Option<Value>, Error> {
     let nums = context.get_var(&"nums".to_string()).unwrap();
@@ -380,29 +406,29 @@ fn _add_str(context: &mut Context) -> Result<Option<Value>, Error> {
             }
         }
         Ok(Some(Value::String(string)))
-    } else { panic!("type checking doesn't work"); }
+    } else { panic!("type checking doesn't work") }
 }
 fn _sub_int(context: &mut Context) -> Result<Option<Value>, Error> {
     let nums = context.get_var(&"nums".to_string()).unwrap();
     if let Value::Vector(nums, Some(Type::Int)) = nums {
-        if nums.len() > 1 {
-            let mut iter = nums.iter();
-            let mut sum: i64 = 0;
-            if let Some(Value::Int(n)) = iter.next() {
-                sum = *n;
-            }
-            for n in iter {
-                if let Value::Int(n) = n {
-                    sum -= *n;
-                }
-            }
-            Ok(Some(Value::Int(sum)))
-        } else if let Value::Int(n) = &nums[0] {
-            Ok(Some(Value::Int(-n)))
-        } else {
-            panic!("type checking doesn't work")
+        let mut iter = nums.iter();
+        let mut sum: i64 = 0;
+        if let Some(Value::Int(n)) = iter.next() {
+            sum = *n;
         }
+        for n in iter {
+            if let Value::Int(n) = n {
+                sum -= *n;
+            }
+        }
+        Ok(Some(Value::Int(sum)))
     } else { panic!("type checking doesn't work"); }
+}
+fn _neg_int(context: &mut Context) -> Result<Option<Value>, Error> {
+    let n = context.get_var(&"n".to_string()).unwrap();
+    if let Value::Int(n) = n {
+        Ok(Some(Value::Int(-n)))
+    } else { panic!("type checking doesn't work") }
 }
 fn _sub_float(context: &mut Context) -> Result<Option<Value>, Error> {
     let nums = context.get_var(&"nums".to_string()).unwrap();
@@ -426,7 +452,13 @@ fn _sub_float(context: &mut Context) -> Result<Option<Value>, Error> {
         }
     } else { panic!("type checking doesn't work") }
 }
-pub fn std_context() -> Context {
+fn _neg_float(context: &mut Context) -> Result<Option<Value>, Error> {
+    let n = context.get_var(&"n".to_string()).unwrap();
+    if let Value::Float(n) = n {
+        Ok(Some(Value::Float(-n)))
+    } else { panic!("type checking doesn't work") }
+}
+pub fn std_context() -> Result<Context, Error> {
     let mut context = Context::new();
     let pos = Position::new(0..0, 0..0, &String::from("<STD>"));
     // +
@@ -434,27 +466,37 @@ pub fn std_context() -> Context {
         params: vec![("nums".to_string(), Type::Int, true)],
         return_type: Some(Type::Int),
         body: _add_int
-    }, pos.clone());
+    }, pos.clone())?;
     context.create_native_fn(String::from("+"), NativFunction {
         params: vec![("nums".to_string(), Type::Float, true)],
         return_type: Some(Type::Float),
         body: _add_float
-    }, pos.clone());
+    }, pos.clone())?;
     context.create_native_fn(String::from("+"), NativFunction {
         params: vec![("nums".to_string(), Type::String, true)],
         return_type: Some(Type::String),
         body: _add_str
-    }, pos.clone());
+    }, pos.clone())?;
     // -
+    context.create_native_fn(String::from("-"), NativFunction {
+        params: vec![("n".to_string(), Type::Int, false)],
+        return_type: Some(Type::Int),
+        body: _neg_int
+    }, pos.clone())?;
+    context.create_native_fn(String::from("-"), NativFunction {
+        params: vec![("n".to_string(), Type::Float, false)],
+        return_type: Some(Type::Float),
+        body: _neg_float
+    }, pos.clone())?;
     context.create_native_fn(String::from("-"), NativFunction {
         params: vec![("nums".to_string(), Type::Int, true)],
         return_type: Some(Type::Int),
         body: _sub_int
-    }, pos.clone());
+    }, pos.clone())?;
     context.create_native_fn(String::from("-"), NativFunction {
         params: vec![("nums".to_string(), Type::Float, true)],
         return_type: Some(Type::Float),
         body: _sub_float
-    }, pos.clone());
-    context
+    }, pos.clone())?;
+    Ok(context)
 }
