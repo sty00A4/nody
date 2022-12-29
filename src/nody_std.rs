@@ -264,6 +264,26 @@ fn _bool_str(context: &mut Context) -> Result<Option<Value>, Error> {
         }
     } else { panic!("type checking doesn't work") }
 }
+// char
+fn _char_int(context: &mut Context) -> Result<Option<Value>, Error> {
+    let v = context.get_var(&"v".to_string()).unwrap();
+    if let Value::Int(v) = v {
+        Ok(Some(Value::Char(*v as u8 as char)))
+    } else { panic!("type checking doesn't work") }
+}
+fn _char_char(context: &mut Context) -> Result<Option<Value>, Error> {
+    Ok(Some(context.get_var(&"v".to_string()).unwrap().clone()))
+}
+fn _char_str(context: &mut Context) -> Result<Option<Value>, Error> {
+    let v = context.get_var(&"v".to_string()).unwrap();
+    if let Value::String(v) = v {
+        if let Ok(v) = v.parse::<char>() {
+            Ok(Some(Value::Char(v)))
+        } else {
+            Err(Error::ParseChar(v.clone()))
+        }
+    } else { panic!("type checking doesn't work") }
+}
 
 pub fn std_context() -> Result<Context, Error> {
     let mut context = Context::new();
@@ -410,6 +430,22 @@ pub fn std_context() -> Result<Context, Error> {
         params: vec![("v".to_string(), Type::String, false)],
         return_type: Some(Type::Bool),
         body: _bool_str
+    }, pos.clone())?;
+    // char
+    context.create_native_fn(String::from("char"), NativFunction {
+        params: vec![("v".to_string(), Type::Int, false)],
+        return_type: Some(Type::Char),
+        body: _char_int
+    }, pos.clone())?;
+    context.create_native_fn(String::from("char"), NativFunction {
+        params: vec![("v".to_string(), Type::Char, false)],
+        return_type: Some(Type::Char),
+        body: _char_char
+    }, pos.clone())?;
+    context.create_native_fn(String::from("char"), NativFunction {
+        params: vec![("v".to_string(), Type::String, false)],
+        return_type: Some(Type::Char),
+        body: _char_str
     }, pos.clone())?;
     Ok(context)
 }
