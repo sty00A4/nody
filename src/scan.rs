@@ -1,10 +1,11 @@
 use crate::*;
 
-pub const WS: [&str; 4] = [" ", "\r", "\t", "\n"];
-pub const SYMBOLS: [&str; 11] = ["(", ")", "[", "]", "{", "}", "@", "#", "$", "\"", "'"];
+pub const WS: [char; 4] = [' ', '\r', '\t', '\n'];
+pub const SYMBOLS: [char; 12] = [';', '(', ')', '[', ']', '{', '}', '@', '#', '$', '"', '\''];
 pub type NodeRef = Box<Node>;
 #[derive(Clone, Debug, PartialEq)]
 pub enum Node {
+    None { pos: Position },
     Int { v: i64, pos: Position }, Float{ v: f64, pos: Position }, Char { v: char, pos: Position },
     Bool { v: bool, pos: Position }, String { v: String, pos: Position },
     Type { v: Type, pos: Position },
@@ -16,6 +17,7 @@ pub enum Node {
 impl Node {
     pub fn pos(&self) -> &Position {
         match self {
+            Node::None { pos }                  => pos,
             Node::Int { v:_, pos }              => pos,
             Node::Float { v:_, pos }            => pos,
             Node::Char { v:_, pos }             => pos,
@@ -35,6 +37,7 @@ impl Node {
 impl Display for Node {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Node::None { pos:_ }              => write!(f, "()"),
             Node::Int { v, pos:_ }            => write!(f, "{v:?}"),
             Node::Float { v, pos:_ }          => write!(f, "{v:?}"),
             Node::Char { v, pos:_ }           => write!(f, "'{v}"),
@@ -63,15 +66,12 @@ impl Scanner {
     pub fn new(path: &String, text: String) -> Self {
         Self { idx: 0, ln: 0, col: 0, text, path: path.clone() }
     }
-    pub fn get(&self) -> &str {
-        self.text.get(self.idx..self.idx+1).or_else(|| Some("")).unwrap()
-    }
-    pub fn get_char(&self) -> char {
+    pub fn get(&self) -> char {
         self.text.get(self.idx..self.idx+1).or_else(|| Some("")).unwrap().chars().next().or_else(|| Some('\0')).unwrap()
     }
     pub fn advance(&mut self) {
         self.idx += 1; self.col += 1;
-        if self.get() == "\n" {
+        if self.get() == '\n' {
             self.ln += 1;
             self.col = 0;
         }
@@ -83,7 +83,7 @@ impl Scanner {
     }
     pub fn scan(&mut self) -> Result<Node, Error> {
         let mut nodes: Vec<Node> = vec![];
-        while self.get() != "" {
+        while self.get() != '\0' {
             let node = self.node()?; self.advance_ws();
             nodes.push(node);
         }
@@ -94,70 +94,84 @@ impl Scanner {
         }
     }
     pub fn node(&mut self) -> Result<Node, Error> {
+        self.advance_ws();
         match self.get() {
-            "(" => {
+            ';' => {
+                while self.get() == ';' {
+                    while self.get() != '\n' { self.advance(); }
+                    self.advance(); self.advance_ws();
+                }
+                self.node()
+            }
+            '(' => {
                 let (start_ln, start_col) = (self.ln, self.col);
                 self.advance(); self.advance_ws();
+                if self.get() == ')' {
+                    self.advance();
+                    let (stop_ln, stop_col) = (self.ln, self.col);
+                    self.advance_ws();
+                    return Ok(Node::None { pos: Position::new(start_ln..stop_ln, start_col..stop_col, &self.path) })
+                }
                 let head = Box::new(self.node()?); self.advance_ws();
                 let mut args: Vec<Box<Node>> = vec![];
-                while self.get() != ")" && self.get() != "" {
+                while self.get() != ')' && self.get() != '\0' {
                     let arg = Box::new(self.node()?); self.advance_ws();
                     args.push(arg);
                 }
                 self.advance();
                 Ok(Node::Node { head, args, pos: Position::new(start_ln..self.ln, start_col..self.col, &self.path) })
             }
-            "{" => {
+            '{' => {
                 let (start_ln, start_col) = (self.ln, self.col);
                 self.advance(); self.advance_ws();
                 let mut nodes: Vec<Node> = vec![];
-                while self.get() != "}" && self.get() != "" {
+                while self.get() != '}' && self.get() != '\0' {
                     let node = self.node()?; self.advance_ws();
                     nodes.push(node);
                 }
                 self.advance();
                 Ok(Node::Body { nodes, pos: Position::new(start_ln..self.ln, start_col..self.col, &self.path) })
             }
-            "[" => {
+            '[' => {
                 let (start_ln, start_col) = (self.ln, self.col);
                 self.advance(); self.advance_ws();
                 let mut nodes: Vec<Node> = vec![];
-                while self.get() != "]" && self.get() != "" {
+                while self.get() != ']' && self.get() != '\0' {
                     let node = self.node()?; self.advance_ws();
                     nodes.push(node);
                 }
                 self.advance();
                 Ok(Node::Vector { nodes, pos: Position::new(start_ln..self.ln, start_col..self.col, &self.path) })
             }
-            "@" => {
+            '@' => {
                 let (start_ln, start_col) = (self.ln, self.col);
                 self.advance();
                 let mut word = String::new();
-                while !WS.contains(&self.get()) && !SYMBOLS.contains(&self.get()) && self.get() != "" {
-                    word.push_str(self.get());
+                while !WS.contains(&self.get()) && !SYMBOLS.contains(&self.get()) && self.get() != '\0' {
+                    word.push(self.get());
                     self.advance();
                 }
                 Ok(Node::Key { v: word, pos: Position::new(start_ln..self.ln, start_col..self.col, &self.path) })
             }
-            "#" => {
+            '#' => {
                 let (start_ln, start_col) = (self.ln, self.col);
                 self.advance(); self.advance_ws();
                 let node = self.node()?;
                 Ok(Node::Closure { node: Box::new(node), pos: Position::new(start_ln..self.ln, start_col..self.col, &self.path) })
             }
-            "$" => {
+            '$' => {
                 let (start_ln, start_col) = (self.ln, self.col);
                 self.advance(); self.advance_ws();
-                if self.get_char() != '(' {
-                    return Err(Error::ExpectedSymbol('(', self.get_char()))
+                if self.get() != '(' {
+                    return Err(Error::ExpectedSymbol('(', self.get()))
                 }
                 self.advance(); self.advance_ws();
                 let mut params = vec![];
-                while self.get_char() != ')' && self.get() != "" {
+                while self.get() != ')' && self.get() != '\0' {
                     let (param_start_ln, param_start_col) = (self.ln, self.col);
                     let mut param = String::new();
-                    while !WS.contains(&self.get()) && !SYMBOLS.contains(&self.get()) && self.get() != "" {
-                        param.push(self.get_char());
+                    while !WS.contains(&self.get()) && !SYMBOLS.contains(&self.get()) && self.get() != '\0' {
+                        param.push(self.get());
                         self.advance();
                     }
                     if param.len() == 0 { return Err(Error::ExpectedWord) }
@@ -166,13 +180,13 @@ impl Scanner {
                         let typ = Box::new(self.node()?);
                         let pos = Position::new(start_ln..start_ln, start_col..start_col, &self.path);
                         let pos = Position::between(pos, typ.pos().clone());
-                        let mut more = self.get_char() == '*';
+                        let mut more = self.get() == '*';
                         if more { self.advance(); self.advance_ws(); }
                         params.push((param, typ, more));
                     } else {
                         let mut typ = String::new();
-                        while !WS.contains(&self.get()) && !SYMBOLS.contains(&self.get()) && self.get_char() != '*' && self.get() != "" {
-                            typ.push(self.get_char());
+                        while !WS.contains(&self.get()) && !SYMBOLS.contains(&self.get()) && self.get() != '*' && self.get() != '\0' {
+                            typ.push(self.get());
                             self.advance();
                         }
                         let pos = Position::new(start_ln..self.ln, start_col..self.col, &self.path);
@@ -196,7 +210,7 @@ impl Scanner {
                             "type"      => Node::Type { v: Type::Type, pos },
                             _ => Node::Word { v: typ, pos }
                         });
-                        let mut more = self.get_char() == '*';
+                        let mut more = self.get() == '*';
                         if more { self.advance(); self.advance_ws(); }
                         params.push((param, typ, more));
                     }
@@ -204,52 +218,52 @@ impl Scanner {
                 self.advance();
                 Ok(Node::Params { params, pos: Position::new(start_ln..self.ln, start_col..self.col, &self.path) })
             }
-            "\"" => {
+            '"' => {
                 let (start_ln, start_col) = (self.ln, self.col);
                 self.advance();
                 let mut string = String::new();
-                while self.get() != "\"" && self.get() != "" {
-                    if self.get_char() == '\\' {
+                while self.get() != '"' && self.get() != '\0' {
+                    if self.get() == '\\' {
                         self.advance();
-                        match self.get_char() {
+                        match self.get() {
                             'n' => string.push('\n'),
                             't' => string.push('\t'),
                             'r' => string.push('\r'),
-                            _ => string.push(self.get_char())
+                            _ => string.push(self.get())
                         }
                         self.advance();
                     } else {
-                        string.push(self.get_char());
+                        string.push(self.get());
                         self.advance();
                     }
                 }
-                if self.get() == "" { return Err(Error::UnclosedString) }
+                if self.get() == '\0' { return Err(Error::UnclosedString) }
                 self.advance();
                 match string.parse::<String>() {
                     Ok(string) => Ok(Node::String { v: string, pos: Position::new(start_ln..self.ln, start_col..self.col, &self.path) }),
                     Err(_) => Err(Error::ParseString(string))
                 }
             }
-            "'" => {
+            '\'' => {
                 let (start_ln, start_col) = (self.ln, self.col);
                 self.advance();
                 let mut c = String::new();
-                while self.get() != "\'" && self.get() != "" {
-                    if self.get_char() == '\\' {
+                while self.get() != '\'' && self.get() != '\0' {
+                    if self.get() == '\\' {
                         self.advance();
-                        match self.get_char() {
+                        match self.get() {
                             'n' => c.push('\n'),
                             't' => c.push('\t'),
                             'r' => c.push('\r'),
-                            _ => c.push(self.get_char())
+                            _ => c.push(self.get())
                         }
                         self.advance();
                     } else {
-                        c.push(self.get_char());
+                        c.push(self.get());
                         self.advance();
                     }
                 }
-                if self.get() == "" { return Err(Error::UnclosedChar) }
+                if self.get() == '\0' { return Err(Error::UnclosedChar) }
                 self.advance();
                 match c.parse::<char>() {
                     Ok(c) => Ok(Node::Char { v: c, pos: Position::new(start_ln..self.ln, start_col..self.col, &self.path) }),
@@ -257,18 +271,18 @@ impl Scanner {
                 }
             }
             // numbers
-            _ if self.get_char().is_ascii_digit() => {
+            _ if self.get().is_ascii_digit() => {
                 let (start_ln, start_col) = (self.ln, self.col);
                 let mut number = String::new();
-                while self.get_char().is_ascii_digit() {
-                    number.push_str(self.get());
+                while self.get().is_ascii_digit() {
+                    number.push(self.get());
                     self.advance();
                 }
-                if self.get() == "." {
+                if self.get() == '.' {
                     number.push('.');
                     self.advance();
-                    while self.get_char().is_ascii_digit() {
-                        number.push_str(self.get());
+                    while self.get().is_ascii_digit() {
+                        number.push(self.get());
                         self.advance();
                     }
                     match number.parse() {
@@ -290,8 +304,8 @@ impl Scanner {
             _ => {
                 let (start_ln, start_col) = (self.ln, self.col);
                 let mut word = String::new();
-                while !WS.contains(&self.get()) && !SYMBOLS.contains(&self.get()) && self.get() != "" {
-                    word.push_str(self.get());
+                while !WS.contains(&self.get()) && !SYMBOLS.contains(&self.get()) && self.get() != '\0' {
+                    word.push(self.get());
                     self.advance();
                 }
                 let pos = Position::new(start_ln..self.ln, start_col..self.col, &self.path);

@@ -4,6 +4,7 @@ use crate::*;
 pub enum Return { None, Return }
 pub fn interpret(node: &Node, context: &mut Context) -> Result<(Option<Value>, Return), Error> {
     match node {
+        Node::None { pos:_ } => Ok((None, Return::None)),
         Node::Int { v, pos:_ } => Ok((Some(Value::Int(*v)), Return::None)),
         Node::Float { v, pos:_ } => Ok((Some(Value::Float(*v)), Return::None)),
         Node::Char { v, pos:_ } => Ok((Some(Value::Char(*v)), Return::None)),
