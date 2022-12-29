@@ -430,22 +430,10 @@ pub fn std_context() -> Result<Context, Error> {
         body: _let,
         inline: true
     }, pos.clone())?;
-    context.create_native_fn(String::from("let-global"), NativFunction {
-        params: vec![("id".to_string(), Type::Key, false), ("v".to_string(), Type::Any, false)],
-        return_type: None,
-        body: _let_global,
-        inline: true
-    }, pos.clone())?;
     context.create_native_fn(String::from("mut"), NativFunction {
         params: vec![("id".to_string(), Type::Key, false), ("v".to_string(), Type::Any, false)],
         return_type: None,
         body: _mut,
-        inline: true
-    }, pos.clone())?;
-    context.create_native_fn(String::from("mut-global"), NativFunction {
-        params: vec![("id".to_string(), Type::Key, false), ("v".to_string(), Type::Any, false)],
-        return_type: None,
-        body: _mut_global,
         inline: true
     }, pos.clone())?;
     context.create_native_fn(String::from("set"), NativFunction {
@@ -459,7 +447,7 @@ pub fn std_context() -> Result<Context, Error> {
         params: vec![("node".to_string(), Type::Closure, false)],
         return_type: Some(Type::Any),
         body: _do,
-        inline: false
+        inline: true
     }, pos.clone())?;
     context.create_native_fn(String::from("?"), NativFunction {
         params: vec![
@@ -478,7 +466,7 @@ pub fn std_context() -> Result<Context, Error> {
         ],
         return_type: Some(Type::Any),
         body: _if_closure,
-        inline: false
+        inline: true
     }, pos.clone())?; // replace with nody function later
     context.create_native_fn(String::from("if"), NativFunction {
         params: vec![
@@ -488,7 +476,7 @@ pub fn std_context() -> Result<Context, Error> {
         ],
         return_type: Some(Type::Any),
         body: _if_else_closure,
-        inline: false
+        inline: true
     }, pos.clone())?; // replace with nody function later
     // +
     context.create_native_fn(String::from("+"), NativFunction {
