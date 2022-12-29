@@ -1,5 +1,9 @@
 ; control flow
-(def-global @if $(cond bool case closure)
+(def-global-inline @if $(cond bool case closure)
     #(do (? cond case #())))
-(def-global @if $(cond bool case closure else closure)
+(def-global-inline @if $(cond bool case closure else closure)
     #(do (? cond case else)))
+; logic
+(def-global @not $(v bool) #(? v false true))
+(def-global @or $(v1 any v2 any) #(? (bool v1) v1 v2))
+(def-global @and $(v1 any v2 any) #(? (bool v1) (? (bool v2) v2 false) false))

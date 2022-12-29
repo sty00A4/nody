@@ -104,6 +104,55 @@ fn _def_return(context: &mut Context) -> Result<Option<Value>, Error> {
         } else { panic!("type checking doesn't work") }
     } else { panic!("type checking doesn't work") }
 }
+fn _def_inline(context: &mut Context) -> Result<Option<Value>, Error> {
+    let id = context.get_var(&"id".to_string()).unwrap().clone();
+    let p = context.get_var(&"p".to_string()).unwrap().clone();
+    let body = context.get_var(&"body".to_string()).unwrap().clone();
+    let pos = context.get_var_pos(&"body".to_string()).unwrap().clone();
+    if let Value::Key(id) = id {
+        if let Value::Params(p) = p {
+            if let Value::Closure(body) = body {
+                let func = Function::new(p, None, Box::new(body), true);
+                let len = context.scopes.len();
+                if context.fn_exists(&id) {
+                    context.create_fn(id, func, pos)?;
+                } else {
+                    match context.scopes.get_mut(len - 2) { // try to mutate the scope before the last
+                        Some(scope) => scope.create_fn(id, func, pos)?,
+                        None => context.create_fn(id, func, pos)?
+                    }
+                }
+                Ok(None)
+            } else { panic!("type checking doesn't work") }
+        } else { panic!("type checking doesn't work") }
+    } else { panic!("type checking doesn't work") }
+}
+fn _def_return_inline(context: &mut Context) -> Result<Option<Value>, Error> {
+    let id = context.get_var(&"id".to_string()).unwrap().clone();
+    let p = context.get_var(&"p".to_string()).unwrap().clone();
+    let body = context.get_var(&"body".to_string()).unwrap().clone();
+    let return_type = context.get_var(&"return_type".to_string()).unwrap().clone();
+    let pos = context.get_var_pos(&"body".to_string()).unwrap().clone();
+    if let Value::Key(id) = id {
+        if let Value::Params(p) = p {
+            if let Value::Closure(body) = body {
+                if let Value::Type(return_type) = return_type {
+                    let func = Function::new(p, Some(return_type), Box::new(body), true);
+                    let len = context.scopes.len();
+                    if context.fn_exists(&id) {
+                        context.create_fn(id, func, pos)?;
+                    } else {
+                        match context.scopes.get_mut(len - 2) { // try to mutate the scope before the last
+                            Some(scope) => scope.create_fn(id, func, pos)?,
+                            None => context.create_fn(id, func, pos)?
+                        }
+                    }
+                    Ok(None)
+                } else { panic!("type checking doesn't work") }
+            } else { panic!("type checking doesn't work") }
+        } else { panic!("type checking doesn't work") }
+    } else { panic!("type checking doesn't work") }
+}
 fn _def_global(context: &mut Context) -> Result<Option<Value>, Error> {
     let id = context.get_var(&"id".to_string()).unwrap().clone();
     let p = context.get_var(&"p".to_string()).unwrap().clone();
@@ -130,6 +179,39 @@ fn _def_return_global(context: &mut Context) -> Result<Option<Value>, Error> {
             if let Value::Closure(body) = body {
                 if let Value::Type(return_type) = return_type {
                     let func = Function::new(p, Some(return_type), Box::new(body), false);
+                    context.create_fn_global(id, func, pos)?;
+                    Ok(None)
+                } else { panic!("type checking doesn't work") }
+            } else { panic!("type checking doesn't work") }
+        } else { panic!("type checking doesn't work") }
+    } else { panic!("type checking doesn't work") }
+}
+fn _def_global_inline(context: &mut Context) -> Result<Option<Value>, Error> {
+    let id = context.get_var(&"id".to_string()).unwrap().clone();
+    let p = context.get_var(&"p".to_string()).unwrap().clone();
+    let body = context.get_var(&"body".to_string()).unwrap().clone();
+    let pos = context.get_var_pos(&"body".to_string()).unwrap().clone();
+    if let Value::Key(id) = id {
+        if let Value::Params(p) = p {
+            if let Value::Closure(body) = body {
+                let func = Function::new(p, None, Box::new(body), true);
+                context.create_fn_global(id, func, pos)?;
+                Ok(None)
+            } else { panic!("type checking doesn't work") }
+        } else { panic!("type checking doesn't work") }
+    } else { panic!("type checking doesn't work") }
+}
+fn _def_return_global_inline(context: &mut Context) -> Result<Option<Value>, Error> {
+    let id = context.get_var(&"id".to_string()).unwrap().clone();
+    let p = context.get_var(&"p".to_string()).unwrap().clone();
+    let body = context.get_var(&"body".to_string()).unwrap().clone();
+    let return_type = context.get_var(&"return_type".to_string()).unwrap().clone();
+    let pos = context.get_var_pos(&"body".to_string()).unwrap().clone();
+    if let Value::Key(id) = id {
+        if let Value::Params(p) = p {
+            if let Value::Closure(body) = body {
+                if let Value::Type(return_type) = return_type {
+                    let func = Function::new(p, Some(return_type), Box::new(body), true);
                     context.create_fn_global(id, func, pos)?;
                     Ok(None)
                 } else { panic!("type checking doesn't work") }
@@ -546,6 +628,27 @@ pub fn std_context() -> Result<Context, Error> {
         body: _def,
         inline: true
     }, pos.clone())?;
+    context.create_native_fn(String::from("def-inline"), NativFunction {
+        params: vec![
+            ("id".to_string(), Type::Key, false),
+            ("p".to_string(), Type::Params, false),
+            ("body".to_string(), Type::Closure, false),
+            ("return_type".to_string(), Type::Type, false),
+        ],
+        return_type: None,
+        body: _def_return_inline,
+        inline: true
+    }, pos.clone())?;
+    context.create_native_fn(String::from("def-inline"), NativFunction {
+        params: vec![
+            ("id".to_string(), Type::Key, false),
+            ("p".to_string(), Type::Params, false),
+            ("body".to_string(), Type::Closure, false),
+        ],
+        return_type: None,
+        body: _def_inline,
+        inline: true
+    }, pos.clone())?;
     context.create_native_fn(String::from("def-global"), NativFunction {
         params: vec![
             ("id".to_string(), Type::Key, false),
@@ -565,6 +668,27 @@ pub fn std_context() -> Result<Context, Error> {
         ],
         return_type: None,
         body: _def_global,
+        inline: true
+    }, pos.clone())?;
+    context.create_native_fn(String::from("def-global-inline"), NativFunction {
+        params: vec![
+            ("id".to_string(), Type::Key, false),
+            ("p".to_string(), Type::Params, false),
+            ("body".to_string(), Type::Closure, false),
+            ("return_type".to_string(), Type::Type, false),
+        ],
+        return_type: None,
+        body: _def_return_global_inline,
+        inline: true
+    }, pos.clone())?;
+    context.create_native_fn(String::from("def-global-inline"), NativFunction {
+        params: vec![
+            ("id".to_string(), Type::Key, false),
+            ("p".to_string(), Type::Params, false),
+            ("body".to_string(), Type::Closure, false),
+        ],
+        return_type: None,
+        body: _def_global_inline,
         inline: true
     }, pos.clone())?;
     // control flow
