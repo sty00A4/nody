@@ -180,6 +180,58 @@ fn _mod_float(context: &mut Context) -> Result<Option<Value>, Error> {
         Ok(Some(Value::Float(sum)))
     } else { panic!("type checking doesn't work") }
 }
+// int
+fn _int_int(context: &mut Context) -> Result<Option<Value>, Error> {
+    Ok(Some(context.get_var(&"v".to_string()).unwrap().clone()))
+}
+fn _int_float(context: &mut Context) -> Result<Option<Value>, Error> {
+    let v = context.get_var(&"v".to_string()).unwrap();
+    if let Value::Float(v) = v {
+        Ok(Some(Value::Int(*v as i64)))
+    } else { panic!("type checking doesn't work") }
+}
+fn _int_char(context: &mut Context) -> Result<Option<Value>, Error> {
+    let v = context.get_var(&"v".to_string()).unwrap();
+    if let Value::Char(v) = v {
+        Ok(Some(Value::Int(*v as i64)))
+    } else { panic!("type checking doesn't work") }
+}
+fn _int_bool(context: &mut Context) -> Result<Option<Value>, Error> {
+    let v = context.get_var(&"v".to_string()).unwrap();
+    if let Value::Bool(v) = v {
+        Ok(Some(Value::Int(*v as i64)))
+    } else { panic!("type checking doesn't work") }
+}
+fn _int_str(context: &mut Context) -> Result<Option<Value>, Error> {
+    let v = context.get_var(&"v".to_string()).unwrap();
+    if let Value::String(v) = v {
+        if let Ok(v) = v.parse::<i64>() {
+            Ok(Some(Value::Int(v)))
+        } else {
+            Err(Error::ParseInt(v.clone()))
+        }
+    } else { panic!("type checking doesn't work") }
+}
+// float
+fn _float_int(context: &mut Context) -> Result<Option<Value>, Error> {
+    let v = context.get_var(&"v".to_string()).unwrap();
+    if let Value::Int(v) = v {
+        Ok(Some(Value::Float(*v as f64)))
+    } else { panic!("type checking doesn't work") }
+}
+fn _float_float(context: &mut Context) -> Result<Option<Value>, Error> {
+    Ok(Some(context.get_var(&"v".to_string()).unwrap().clone()))
+}
+fn _float_str(context: &mut Context) -> Result<Option<Value>, Error> {
+    let v = context.get_var(&"v".to_string()).unwrap();
+    if let Value::String(v) = v {
+        if let Ok(v) = v.parse::<f64>() {
+            Ok(Some(Value::Float(v)))
+        } else {
+            Err(Error::ParseFloat(v.clone()))
+        }
+    } else { panic!("type checking doesn't work") }
+}
 pub fn std_context() -> Result<Context, Error> {
     let mut context = Context::new();
     let pos = Position::new(0..0, 0..0, &String::from("<STD>"));
@@ -257,6 +309,48 @@ pub fn std_context() -> Result<Context, Error> {
         params: vec![("n".to_string(), Type::Float, false), ("nums".to_string(), Type::Float, true)],
         return_type: Some(Type::Float),
         body: _mod_float
+    }, pos.clone())?;
+    // int
+    context.create_native_fn(String::from("int"), NativFunction {
+        params: vec![("v".to_string(), Type::Int, false)],
+        return_type: Some(Type::Int),
+        body: _int_int
+    }, pos.clone())?;
+    context.create_native_fn(String::from("int"), NativFunction {
+        params: vec![("v".to_string(), Type::Float, false)],
+        return_type: Some(Type::Int),
+        body: _int_float
+    }, pos.clone())?;
+    context.create_native_fn(String::from("int"), NativFunction {
+        params: vec![("v".to_string(), Type::Char, false)],
+        return_type: Some(Type::Int),
+        body: _int_char
+    }, pos.clone())?;
+    context.create_native_fn(String::from("int"), NativFunction {
+        params: vec![("v".to_string(), Type::Bool, false)],
+        return_type: Some(Type::Int),
+        body: _int_bool
+    }, pos.clone())?;
+    context.create_native_fn(String::from("int"), NativFunction {
+        params: vec![("v".to_string(), Type::String, false)],
+        return_type: Some(Type::Int),
+        body: _int_str
+    }, pos.clone())?;
+    // float
+    context.create_native_fn(String::from("float"), NativFunction {
+        params: vec![("v".to_string(), Type::Int, false)],
+        return_type: Some(Type::Float),
+        body: _float_int
+    }, pos.clone())?;
+    context.create_native_fn(String::from("float"), NativFunction {
+        params: vec![("v".to_string(), Type::Float, false)],
+        return_type: Some(Type::Float),
+        body: _float_float
+    }, pos.clone())?;
+    context.create_native_fn(String::from("float"), NativFunction {
+        params: vec![("v".to_string(), Type::String, false)],
+        return_type: Some(Type::Float),
+        body: _float_str
     }, pos.clone())?;
     Ok(context)
 }

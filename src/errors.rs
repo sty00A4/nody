@@ -14,7 +14,8 @@ pub enum Error {
     ParseFloat(String), ParseInt(String), ParseIntOverflow(String), ParseIntNegOverflow(String),
     NotDefined(String), AlreadyDefined(String), Immutable(String),
     Expected, ExpectedType(Type, Type), ExpectedTypes(Vec<Type>, Type),
-    FunctionPatternNotFound(String, Vec<Type>)
+    FunctionPatternNotFound(String, Vec<Type>),
+    InvalidHeadValue(Value), InvalidHeadCastType(Type)
 }
 impl Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -32,6 +33,8 @@ impl Display for Error {
             t.iter().map(|x| x.to_string()).collect::<Vec<String>>().join("|")),
             Self::FunctionPatternNotFound(id, types) => write!(f, "ERROR: no function {id:?} found with pattern ({})",
             types.iter().map(|x| x.to_string()).collect::<Vec<String>>().join(", ")),
+            Self::InvalidHeadValue(v) => write!(f, "ERROR: unexpected {} value for head", v.typ()),
+            Self::InvalidHeadCastType(t) => write!(f, "ERROR: unexpected {t} type for casting"),
         }
     }
 }

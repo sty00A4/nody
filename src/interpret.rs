@@ -65,7 +65,18 @@ pub fn interpret(node: &Node, context: &mut Context) -> Result<(Option<Value>, R
                 }
             }
             if let Some(head_value) = interpret(head, context)?.0 {
-                todo!("value as head")
+                match head_value {
+                    Value::Type(typ) => match context.get_native_fn(&typ.to_string(), &types) {
+                        Some(func) => {
+                            let mut func_context = Context::call(context);
+                            func_context.create_params(&func.params, values, poses)?;
+                            let value = (func.body)(&mut func_context)?;
+                            return Ok((value, Return::None))
+                        }
+                        None => Err(Error::InvalidHeadCastType(typ.clone()))
+                    }
+                    _ => Err(Error::InvalidHeadValue(head_value.clone()))
+                }
             } else {
                 Err(Error::Expected)
             }
