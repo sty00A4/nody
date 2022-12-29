@@ -1,6 +1,6 @@
 use crate::*;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Position { pub ln: Range<usize>, pub col: Range<usize>, pub path: String }
 impl Position {
     pub fn new(ln: Range<usize>, col: Range<usize>, path: &String) -> Self { Self { ln, col, path: path.clone() } }

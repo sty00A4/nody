@@ -3,7 +3,7 @@ use crate::*;
 pub const WS: [&str; 4] = [" ", "\r", "\t", "\n"];
 pub const SYMBOLS: [&str; 11] = ["(", ")", "[", "]", "{", "}", "@", "#", "$", "\"", "'"];
 pub type NodeRef = Box<Node>;
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Node {
     Int { v: i64, pos: Position }, Float{ v: f64, pos: Position }, Char { v: char, pos: Position },
     Bool { v: bool, pos: Position }, String { v: String, pos: Position },
@@ -238,16 +238,21 @@ impl Scanner {
                 }
                 let pos = Position::new(start_ln..self.ln, start_col..self.col, &self.path);
                 match word.as_str() {
-                    "true"    => Ok(Node::Bool { v: true, pos }),
-                    "false"   => Ok(Node::Bool { v: false, pos }),
-                    "int"     => Ok(Node::Type { v: Type::Int, pos }),
-                    "float"   => Ok(Node::Type { v: Type::Float, pos }),
-                    "char"    => Ok(Node::Type { v: Type::Char, pos }),
-                    "bool"    => Ok(Node::Type { v: Type::Bool, pos }),
-                    "str"     => Ok(Node::Type { v: Type::String, pos }),
-                    "vec"     => Ok(Node::Type { v: Type::Vector(None), pos }),
-                    "fn"      => Ok(Node::Type { v: Type::Function(vec![], None), pos }),
-                    "type"    => Ok(Node::Type { v: Type::Type, pos }),
+                    "true"      => Ok(Node::Bool { v: true, pos }),
+                    "false"     => Ok(Node::Bool { v: false, pos }),
+                    "any"       => Ok(Node::Type { v: Type::Any, pos }),
+                    "int"       => Ok(Node::Type { v: Type::Int, pos }),
+                    "float"     => Ok(Node::Type { v: Type::Float, pos }),
+                    "char"      => Ok(Node::Type { v: Type::Char, pos }),
+                    "bool"      => Ok(Node::Type { v: Type::Bool, pos }),
+                    "str"       => Ok(Node::Type { v: Type::String, pos }),
+                    "key"       => Ok(Node::Type { v: Type::Key, pos }),
+                    "closure"   => Ok(Node::Type { v: Type::Closure, pos }),
+                    "vec"       => Ok(Node::Type { v: Type::Vector(None), pos }),
+                    "obj"       => Ok(Node::Type { v: Type::Object, pos }),
+                    "fn"        => Ok(Node::Type { v: Type::Function(vec![], None), pos }),
+                    "native-fn" => Ok(Node::Type { v: Type::NativFunction(vec![], None), pos }),
+                    "type"      => Ok(Node::Type { v: Type::Type, pos }),
                     _ => Ok(Node::Word { v: word, pos })
                 }
             }

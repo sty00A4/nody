@@ -33,6 +33,7 @@ pub fn interpret(node: &Node, context: &mut Context) -> Result<(Option<Value>, R
             None => Err(Error::NotDefined(v.clone()))
         }
         Node::Key { v, pos:_ } => Ok((Some(Value::Key(v.clone())), Return::None)),
+        Node::Closure { node, pos } => Ok((Some(Value::Closure(node.as_ref().clone())), Return::None)),
         Node::Body { nodes, pos:_ } => {
             context.push();
             for node in nodes.iter() {
@@ -47,6 +48,7 @@ pub fn interpret(node: &Node, context: &mut Context) -> Result<(Option<Value>, R
         }
         Node::Node { head, args, pos:_ } => {
             context.push();
+            // get arguements
             let mut values: Vec<Value> = vec![];
             let mut types: Vec<Type> = vec![];
             let mut poses: Vec<Position> = vec![];
@@ -59,6 +61,7 @@ pub fn interpret(node: &Node, context: &mut Context) -> Result<(Option<Value>, R
                     return Err(Error::Expected)
                 }
             }
+            // try to get a function
             if let Node::Word { v, pos:_ } = head.as_ref() {
                 match context.get_native_fn(v, &types) {
                     Some(func) => {
@@ -88,6 +91,7 @@ pub fn interpret(node: &Node, context: &mut Context) -> Result<(Option<Value>, R
                     }
                 }
             }
+            // not a function
             if let Some(head_value) = interpret(head, context)?.0 {
                 if types.len() == 0 {
                     context.pop();
