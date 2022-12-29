@@ -127,9 +127,7 @@ impl Scope {
         match self.native_funcs.get(id) {
             Some(defs) => {
                 for (func, _) in defs.iter() {
-                    if func.pattern_match(pattern) {
-                        return Some(func)
-                    }
+                    if func.pattern_match(pattern) { return Some(func) }
                 }
                 None
             }

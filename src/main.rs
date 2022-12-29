@@ -1,10 +1,10 @@
 #![allow(unused)]
-mod errors;
-mod value;
-mod context;
-mod scan;
-mod interpret;
-mod nody_std;
+pub mod errors;
+pub mod value;
+pub mod context;
+pub mod scan;
+pub mod interpret;
+pub mod nody_std;
 use errors::*;
 use value::*;
 use context::*;
@@ -18,40 +18,47 @@ use std::fmt::{Debug, Display};
 use core::num::IntErrorKind;
 use std::cmp::{min, max};
 
-fn run(args: &mut Iter<String>) -> Result<(Option<Value>, Return), Error> {
+pub fn run(path: &String, text: String) -> Result<(Option<Value>, Return), Error> {
+    let mut context = match std_context() {
+        Ok(context) => context,
+        Err(e) => {
+            println!("{e}");
+            Context::new()
+        }
+    };
+    interpret(&scan_file(path, text)?, &mut context)
+}
+pub fn run_context(path: &String, text: String, context: &mut Context) -> Result<(Option<Value>, Return), Error> {
+    interpret(&scan_file(path, text)?, context)
+}
+pub fn run_file(path: &String) -> Result<(Option<Value>, Return), Error> {
+    match std::fs::read_to_string(path) {
+        Ok(text) => run(path, text),
+        Err(_) => Err(Error::TargetFileNotFound(path.clone()))
+    }
+}
+pub fn run_file_context(path: &String, context: &mut Context) -> Result<(Option<Value>, Return), Error> {
+    match std::fs::read_to_string(path) {
+        Ok(text) => run_context(path, text, context),
+        Err(_) => Err(Error::TargetFileNotFound(path.clone()))
+    }
+}
+
+fn main() {
     let args: Vec<String> = std::env::args().collect();
     let mut args = args.iter();
     args.next();
     match args.next() {
-        Some(path) => match std::fs::read_to_string(path) {
-            Ok(text) => {
-                let mut context = match std_context() {
-                    Ok(context) => context,
-                    Err(e) => {
-                        println!("{e}");
-                        Context::new()
-                    }
-                };
-                interpret(&scan_file(path, text)?, &mut context)
-            }
-            Err(_) => Err(Error::TargetFileNotFound(path.clone()))
+        Some(path) => match run_file(path) {
+            Ok((value, ret)) => if let Some(value) = value { println!("{value}") }
+            Err(e) => println!("{e}")
         }
         None => {
             println!("This is Nody interpreter is written in Rust.");
             println!("USAGE:");
             println!("  nody [file path] - execute file");
             println!("  ...more comming soon...");
-            Ok((None, Return::None))
         }
-    }
-}
-
-pub fn main() {
-    let args: Vec<String> = std::env::args().collect();
-    let mut args = args.iter();
-    match run(&mut args) {
-        Ok((value, ret)) => if let Some(value) = value { println!("{value}") }
-        Err(e) => println!("{e}")
     }
 }
 

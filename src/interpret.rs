@@ -74,7 +74,7 @@ pub fn interpret(node: &Node, context: &mut Context) -> Result<(Option<Value>, R
                     types.push(value.typ());
                     values.push(value);
                 } else {
-                    return Err(Error::Expected)
+                    return Err(Error::ExpectedArg)
                 }
             }
             // try to get a function

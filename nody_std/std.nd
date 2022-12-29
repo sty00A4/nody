@@ -1,0 +1,4 @@
+(def-global @if $(cond bool case closure)
+    #(do (? cond case #(0))))
+(def-global @if $(cond bool case closure else closure)
+    #(do (? cond case else)))

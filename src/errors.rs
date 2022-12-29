@@ -17,7 +17,7 @@ pub enum Error {
     ParseChar(String), ParseBool(String), ParseString(String),
     UnclosedChar, UnclosedString,
     NotDefined(String), AlreadyDefined(String), Immutable(String),
-    Expected, ExpectedType(Type, Type), ExpectedTypes(Vec<Type>, Type),
+    Expected, ExpectedArg, ExpectedType(Type, Type), ExpectedTypes(Vec<Type>, Type),
     FunctionPatternNotFound(String, Vec<Type>),
     InvalidHeadValue(Value), InvalidHeadCastType(Type), InvalidCastBetween(Type, Type),
     IndexOutOfRange(usize, usize)
@@ -41,6 +41,7 @@ impl Display for Error {
             Self::AlreadyDefined(id) => write!(f, "ERROR: {id:?} is already defined"),
             Self::Immutable(id) => write!(f, "ERROR: {id:?} is immutable"),
             Self::Expected => write!(f, "ERROR: expected a value for the head"),
+            Self::ExpectedArg => write!(f, "ERROR: expected a value for argument"),
             Self::ExpectedType(t1, t2) => write!(f, "ERROR: expected {t1}, got {t2}"),
             Self::ExpectedTypes(t, t2) => write!(f, "ERROR: expected {}, got {t2}",
             t.iter().map(|x| x.to_string()).collect::<Vec<String>>().join("|")),

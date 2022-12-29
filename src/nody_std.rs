@@ -584,25 +584,6 @@ pub fn std_context() -> Result<Context, Error> {
         body: _if,
         inline: false
     }, pos.clone())?;
-    context.create_native_fn(String::from("if"), NativFunction {
-        params: vec![
-            ("cond".to_string(), Type::Bool, false),
-            ("case".to_string(), Type::Closure, false),
-        ],
-        return_type: Some(Type::Any),
-        body: _if_closure,
-        inline: true
-    }, pos.clone())?; // replace with nody function later
-    context.create_native_fn(String::from("if"), NativFunction {
-        params: vec![
-            ("cond".to_string(), Type::Bool, false),
-            ("case".to_string(), Type::Closure, false),
-            ("else".to_string(), Type::Closure, false)
-        ],
-        return_type: Some(Type::Any),
-        body: _if_else_closure,
-        inline: true
-    }, pos.clone())?; // replace with nody function later
     // +
     context.create_native_fn(String::from("+"), NativFunction {
         params: vec![("n".to_string(), Type::Int, false), ("nums".to_string(), Type::Int, true)],
@@ -833,5 +814,8 @@ pub fn std_context() -> Result<Context, Error> {
         body: _print,
         inline: false
     }, pos.clone())?;
+    let std_path = String::from("nody_std/std.nd");
+    let _ = run_file_context(&std_path, &mut context)?;
+    context.scopes = vec![Scope::new()];
     Ok(context)
 }
