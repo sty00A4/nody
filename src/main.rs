@@ -13,7 +13,7 @@ use std::ops::{Range};
 use std::collections::HashMap;
 use std::fmt::{Debug, Display};
 use core::num::IntErrorKind;
-use std::cmp::{min};
+use std::cmp::{min, max};
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();

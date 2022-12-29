@@ -391,9 +391,11 @@ impl Context {
 }
 
 fn _add_int(context: &mut Context) -> Result<Option<Value>, Error> {
+    let n = context.get_var(&"n".to_string()).unwrap();
     let nums = context.get_var(&"nums".to_string()).unwrap();
     if let Value::Vector(nums, Some(Type::Int)) = nums {
         let mut sum: i64 = 0;
+        if let Value::Int(n) = n { sum = *n; }
         for n in nums.iter() {
             if let Value::Int(n) = n {
                 sum += *n;
@@ -403,9 +405,11 @@ fn _add_int(context: &mut Context) -> Result<Option<Value>, Error> {
     } else { panic!("type checking doesn't work") }
 }
 fn _add_float(context: &mut Context) -> Result<Option<Value>, Error> {
+    let n = context.get_var(&"n".to_string()).unwrap();
     let nums = context.get_var(&"nums".to_string()).unwrap();
     if let Value::Vector(nums, Some(Type::Float)) = nums {
         let mut sum: f64 = 0.0;
+        if let Value::Float(n) = n { sum = *n; }
         for n in nums.iter() {
             if let Value::Float(n) = n {
                 sum += *n;
@@ -415,9 +419,11 @@ fn _add_float(context: &mut Context) -> Result<Option<Value>, Error> {
     } else { panic!("type checking doesn't work") }
 }
 fn _add_str(context: &mut Context) -> Result<Option<Value>, Error> {
+    let n = context.get_var(&"n".to_string()).unwrap();
     let nums = context.get_var(&"nums".to_string()).unwrap();
     if let Value::Vector(nums, Some(Type::String)) = nums {
         let mut string = String::new();
+        if let Value::String(n) = n { string.push_str(n.as_str()); }
         for n in nums.iter() {
             if let Value::String(n) = n {
                 string.push_str(n.as_str());
@@ -499,7 +505,7 @@ fn _mul_str(context: &mut Context) -> Result<Option<Value>, Error> {
     let n = context.get_var(&"n".to_string()).unwrap();
     if let Value::String(s) = s {
         if let Value::Int(n) = n {
-            Ok(Some(Value::String(s.repeat(min::<i64>(*n, 0) as usize))))
+            Ok(Some(Value::String(s.repeat(max::<i64>(*n, 0) as usize))))
         } else { panic!("type checking doesn't work") }
     } else { panic!("type checking doesn't work") }
 }

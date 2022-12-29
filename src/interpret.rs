@@ -55,7 +55,7 @@ pub fn interpret(node: &Node, context: &mut Context) -> Result<(Option<Value>, R
                         }
                         None => match context.get_var(v) {
                             Some(_) => {}
-                            None => if context.fn_exists(v) {
+                            None => if context.fn_exists(v) || context.native_fn_exists(v) {
                                 return Err(Error::FunctionPatternNotFound(v.clone(), types))
                             } else {
                                 return Err(Error::NotDefined(v.clone()))
