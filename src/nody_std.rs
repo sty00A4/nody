@@ -56,6 +56,13 @@ fn _set(context: &mut Context) -> Result<Option<Value>, Error> {
     } else { panic!("type checking doesn't work") }
 }
 // control flow
+fn _do(context: &mut Context) -> Result<Option<Value>, Error> {
+    let node = context.get_var(&"node".to_string()).unwrap().clone();
+    if let Value::Closure(node) = node {
+        let (value, _) = interpret(&node, context)?;
+        Ok(value)
+    } else { panic!("type checking doesn't work") }
+}
 fn _if(context: &mut Context) -> Result<Option<Value>, Error> {
     let cond = context.get_var(&"cond".to_string()).unwrap();
     let case = context.get_var(&"case".to_string()).unwrap();
@@ -448,6 +455,12 @@ pub fn std_context() -> Result<Context, Error> {
         inline: true
     }, pos.clone())?;
     // control flow
+    context.create_native_fn(String::from("do"), NativFunction {
+        params: vec![("node".to_string(), Type::Closure, false)],
+        return_type: Some(Type::Any),
+        body: _do,
+        inline: false
+    }, pos.clone())?;
     context.create_native_fn(String::from("?"), NativFunction {
         params: vec![
             ("cond".to_string(), Type::Bool, false),
