@@ -342,10 +342,19 @@ fn _type(context: &mut Context) -> Result<Option<Value>, Error> {
     Ok(Some(Value::Type(context.get_var(&"v".to_string()).unwrap().typ())))
 }
 // io
+fn _write(context: &mut Context) -> Result<Option<Value>, Error> {
+    let v = context.get_var(&"v".to_string()).unwrap();
+    if let Value::Vector(values, Some(Type::Any)) = v {
+        for v in values.iter() { print!("{v}"); }
+        Ok(None)
+    } else { panic!("type checking doesn't work") }
+}
 fn _print(context: &mut Context) -> Result<Option<Value>, Error> {
     let v = context.get_var(&"v".to_string()).unwrap();
-    println!("{v}");
-    Ok(None)
+    if let Value::Vector(values, Some(Type::Any)) = v {
+        for v in values.iter() { println!("{v}"); }
+        Ok(None)
+    } else { panic!("type checking doesn't work") }
 }
 
 pub fn std_context() -> Result<Context, Error> {
@@ -587,9 +596,15 @@ pub fn std_context() -> Result<Context, Error> {
         body: _type,
         inline: false
     }, pos.clone())?;
-    // print
+    // io
+    context.create_native_fn(String::from("write"), NativFunction {
+        params: vec![("v".to_string(), Type::Any, true)],
+        return_type: None,
+        body: _write,
+        inline: false
+    }, pos.clone())?;
     context.create_native_fn(String::from("print"), NativFunction {
-        params: vec![("v".to_string(), Type::Any, false)],
+        params: vec![("v".to_string(), Type::Any, true)],
         return_type: None,
         body: _print,
         inline: false
