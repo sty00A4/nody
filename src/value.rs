@@ -62,15 +62,16 @@ impl PartialEq for Function {
         true
     }
 }
+pub type NativeFunctionType = fn(&mut Context) -> Result<(Option<Value>, Return), Error>;
 #[derive(Clone)]
 pub struct NativFunction {
     pub params: Vec<(String, Type, bool)>,
     pub return_type: Option<Type>,
-    pub body: fn(&mut Context) -> Result<Option<Value>, Error>,
+    pub body: NativeFunctionType,
     pub inline: bool
 }
 impl NativFunction {
-    pub fn new(params: Vec<(String, Type, bool)>, return_type: Option<Type>, body: fn(&mut Context) -> Result<Option<Value>, Error>, inline: bool) -> Self {
+    pub fn new(params: Vec<(String, Type, bool)>, return_type: Option<Type>, body: NativeFunctionType, inline: bool) -> Self {
         Self { params, return_type, body, inline }
     }
     pub fn type_params(&self) -> Vec<Type> {

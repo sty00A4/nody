@@ -1,7 +1,7 @@
 use crate::*;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub enum Return { None, Return }
+pub enum Return { None, Return, Break, Continue }
 pub fn interpret(node: &Node, context: &mut Context) -> Result<(Option<Value>, Return), Error> {
     match node {
         Node::None { pos:_ } => Ok((None, Return::None)),
@@ -84,10 +84,10 @@ pub fn interpret(node: &Node, context: &mut Context) -> Result<(Option<Value>, R
                     Some(func) => {
                         let mut func_context = Context::call(context, func.inline);
                         func_context.create_params(&func.params, values, poses, func.inline)?;
-                        let value = (func.body)(&mut func_context)?;
+                        let res = (func.body)(&mut func_context)?;
                         context.after_call(func_context, func.inline);
                         context.pop();
-                        return Ok((value, Return::None))
+                        return Ok(res)
                     }
                     None => match context.get_fn(v, &types) {
                         Some(func) => {
@@ -119,10 +119,10 @@ pub fn interpret(node: &Node, context: &mut Context) -> Result<(Option<Value>, R
                         Some(func) => {
                             let mut func_context = Context::call(context, func.inline);
                             func_context.create_params(&func.params, values, poses, func.inline)?;
-                            let value = (func.body)(&mut func_context)?;
+                            let res = (func.body)(&mut func_context)?;
                             context.after_call(func_context, func.inline);
                             context.pop();
-                            return Ok((value, Return::None))
+                            return Ok(res)
                         }
                         None => if context.fn_exists(&typ.to_string()) || context.native_fn_exists(&typ.to_string()) {
                             Err(Error::InvalidCastBetween(typ.clone(), types[0].clone()))

@@ -19,8 +19,10 @@
             v2
             false)))
 ; math
-; (def-global @sum $(nums (vec int))
-;     #{
-;         (mut res 0)
-;         ()
-;     })
+(def-global @sum $(nums (vec int))
+    #{
+        (mut @res 0)
+        (for @n nums
+            #(set @res (+ res n)))
+        (return res)
+    })
