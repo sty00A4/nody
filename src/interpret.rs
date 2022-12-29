@@ -34,6 +34,22 @@ pub fn interpret(node: &Node, context: &mut Context) -> Result<(Option<Value>, R
         }
         Node::Key { v, pos:_ } => Ok((Some(Value::Key(v.clone())), Return::None)),
         Node::Closure { node, pos } => Ok((Some(Value::Closure(node.as_ref().clone())), Return::None)),
+        Node::Params { params: node_params, pos } => {
+            let mut params: Vec<(String, Type, bool)> = vec![];
+            for (param, type_node, more) in node_params.iter() {
+                let (typ, _) = interpret(type_node, context)?;
+                if let Some(typ) = typ {
+                    if let Value::Type(typ) = typ {
+                        params.push((param.clone(), typ, *more));
+                    } else {
+                        return Err(Error::ExpectedType(Type::Type, typ.typ()))
+                    }
+                } else {
+                    return Err(Error::Expected)
+                }
+            }
+            Ok((Some(Value::Params(params)), Return::None))
+        }
         Node::Body { nodes, pos:_ } => {
             context.push();
             for node in nodes.iter() {
