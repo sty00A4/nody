@@ -12,7 +12,8 @@ impl Position {
 #[derive(Debug, Clone)]
 pub enum Error {
     ParseFloat(String), ParseInt(String), ParseIntOverflow(String), ParseIntNegOverflow(String),
-    ParseChar(String), ParseBool(String),
+    ParseChar(String), ParseBool(String), ParseString(String),
+    UnclosedChar, UnclosedString,
     NotDefined(String), AlreadyDefined(String), Immutable(String),
     Expected, ExpectedType(Type, Type), ExpectedTypes(Vec<Type>, Type),
     FunctionPatternNotFound(String, Vec<Type>),
@@ -27,6 +28,9 @@ impl Display for Error {
             Self::ParseIntNegOverflow(n) => write!(f, "ERROR: {n:?} underflowed min int64 value"),
             Self::ParseChar(n) => write!(f, "ERROR: {n:?} couldn't be parsed as an char"),
             Self::ParseBool(n) => write!(f, "ERROR: {n:?} couldn't be parsed as an bool"),
+            Self::ParseString(n) => write!(f, "ERROR: {n:?} couldn't be parsed as an str"),
+            Self::UnclosedChar => write!(f, "ERROR: missing \"'\""),
+            Self::UnclosedString => write!(f, "ERROR: missing closing quotes"),
             Self::NotDefined(id) => write!(f, "ERROR: {id:?} is not defined"),
             Self::AlreadyDefined(id) => write!(f, "ERROR: {id:?} is already defined"),
             Self::Immutable(id) => write!(f, "ERROR: {id:?} is immutable"),

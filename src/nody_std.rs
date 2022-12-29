@@ -284,6 +284,10 @@ fn _char_str(context: &mut Context) -> Result<Option<Value>, Error> {
         }
     } else { panic!("type checking doesn't work") }
 }
+// str
+fn _str_any(context: &mut Context) -> Result<Option<Value>, Error> {
+    Ok(Some(Value::String(context.get_var(&"v".to_string()).unwrap().to_string())))
+}
 
 pub fn std_context() -> Result<Context, Error> {
     let mut context = Context::new();
@@ -446,6 +450,12 @@ pub fn std_context() -> Result<Context, Error> {
         params: vec![("v".to_string(), Type::String, false)],
         return_type: Some(Type::Char),
         body: _char_str
+    }, pos.clone())?;
+    // str
+    context.create_native_fn(String::from("str"), NativFunction {
+        params: vec![("v".to_string(), Type::Any, false)],
+        return_type: Some(Type::String),
+        body: _str_any
     }, pos.clone())?;
     Ok(context)
 }

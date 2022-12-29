@@ -171,8 +171,9 @@ impl Display for Value {
         })
     }
 }
-#[derive(Clone, PartialEq)]
+#[derive(Clone)]
 pub enum Type {
+    Any,
     Int, Float,
     Char, Bool, String, Vector(Option<Box<Type>>),
     Function(Vec<Type>, Option<Box<Type>>), NativFunction(Vec<Type>, Option<Box<Type>>), Object,
@@ -181,6 +182,7 @@ pub enum Type {
 impl Debug for Type {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", match self {
+            Self::Any                 => "any".to_string(),
             Self::Int                 => "int".to_string(),
             Self::Float               => "float".to_string(),
             Self::Char                => "char".to_string(),
@@ -197,6 +199,7 @@ impl Debug for Type {
 impl Display for Type {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", match self {
+            Self::Any                 => "any".to_string(),
             Self::Int                 => "int".to_string(),
             Self::Float               => "float".to_string(),
             Self::Char                => "char".to_string(),
@@ -208,5 +211,23 @@ impl Display for Type {
             Self::Object              => "obj".to_string(),
             Self::Type                => "type".to_string()
         })
+    }
+}
+impl PartialEq for Type {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Any, _) => true, (_, Self::Any) => true,
+            (Self::Int, Self::Int) => true,
+            (Self::Float, Self::Float) => true,
+            (Self::Char, Self::Char) => true,
+            (Self::Bool, Self::Bool) => true,
+            (Self::String, Self::String) => true,
+            (Self::Vector(t1), Self::Vector(t2)) => t1 == t2,
+            (Self::Function(p1, t1), Self::Function(p2, t2)) => p1 == p2 && t1 == t2,
+            (Self::NativFunction(p1, t1), Self::NativFunction(p2, t2)) => p1 == p2 && t1 == t2,
+            (Self::Object, Self::Object) => true,
+            (Self::Type, Self::Type) => true,
+            _ => false
+        }
     }
 }

@@ -153,30 +153,52 @@ impl Scanner {
                 self.advance();
                 let mut string = String::new();
                 while self.get() != "\"" && self.get() != "" {
-                    string.push_str(self.get());
-                    self.advance();
+                    if self.get_char() == '\\' {
+                        self.advance();
+                        match self.get_char() {
+                            'n' => string.push('\n'),
+                            't' => string.push('\t'),
+                            'r' => string.push('\r'),
+                            _ => string.push(self.get_char())
+                        }
+                        self.advance();
+                    } else {
+                        string.push(self.get_char());
+                        self.advance();
+                    }
                 }
+                if self.get() == "" { return Err(Error::UnclosedString) }
                 self.advance();
-                Ok(Node::String {
-                    v: string.replace("\\n", "\n").replace("\\t", "\t").replace("\\r", "\r"),
-                    pos: Position::new(start_ln..self.ln, start_col..self.col, &self.path)
-                })
+                match string.parse::<String>() {
+                    Ok(string) => Ok(Node::String { v: string, pos: Position::new(start_ln..self.ln, start_col..self.col, &self.path) }),
+                    Err(_) => Err(Error::ParseString(string))
+                }
             }
             "'" => {
                 let (start_ln, start_col) = (self.ln, self.col);
                 self.advance();
-                let mut c = self.get_char();
-                if c == '\\' {
-                    self.advance();
-                    match self.get_char() {
-                        'n' => c = '\n',
-                        'r' => c = '\r',
-                        't' => c = '\t',
-                        _ => c = self.get_char()
+                let mut c = String::new();
+                while self.get() != "\'" && self.get() != "" {
+                    if self.get_char() == '\\' {
+                        self.advance();
+                        match self.get_char() {
+                            'n' => c.push('\n'),
+                            't' => c.push('\t'),
+                            'r' => c.push('\r'),
+                            _ => c.push(self.get_char())
+                        }
+                        self.advance();
+                    } else {
+                        c.push(self.get_char());
+                        self.advance();
                     }
                 }
+                if self.get() == "" { return Err(Error::UnclosedChar) }
                 self.advance();
-                Ok(Node::Char { v: c, pos: Position::new(start_ln..self.ln, start_col..self.col, &self.path) })
+                match c.parse::<char>() {
+                    Ok(c) => Ok(Node::Char { v: c, pos: Position::new(start_ln..self.ln, start_col..self.col, &self.path) }),
+                    Err(_) => Err(Error::ParseChar(c))
+                }
             }
             _ if self.get_char().is_ascii_digit() => {
                 let (start_ln, start_col) = (self.ln, self.col);
