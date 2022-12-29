@@ -277,6 +277,9 @@ impl Context {
             Some(scope) => scope.create_fn(id, func, pos)
         }
     }
+    pub fn create_fn_global(&mut self, id: String, func: Function, pos: Position) -> Result<(), Error> {
+        self.global.create_fn(id, func, pos)
+    }
     pub fn create_native_fn(&mut self, id: String, func: NativFunction, pos: Position) -> Result<(), Error> {
         self.global.create_native_fn(id, func, pos)
     }
