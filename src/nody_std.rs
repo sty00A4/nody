@@ -1,5 +1,43 @@
 use crate::*;
 
+// let
+fn _let(context: &mut Context) -> Result<Option<Value>, Error> {
+    let id = context.get_var(&"id".to_string()).unwrap().clone();
+    let pos = context.get_var_pos(&"id".to_string()).unwrap().clone();
+    let v = context.get_var(&"v".to_string()).unwrap().clone();
+    if let Value::Key(id) = id {
+        let len = context.scopes.len();
+        match context.scopes.get_mut(len - 2) {
+            Some(scope) => scope.create_var(id, v, false, pos, false)?,
+            None => context.create_var(id, v, false, pos, false)?
+        }
+        Ok(None)
+    } else { panic!("type checking doesn't work") }
+}
+fn _mut(context: &mut Context) -> Result<Option<Value>, Error> {
+    let id = context.get_var(&"id".to_string()).unwrap().clone();
+    let pos = context.get_var_pos(&"id".to_string()).unwrap().clone();
+    let v = context.get_var(&"v".to_string()).unwrap().clone();
+    if let Value::Key(id) = id {
+        let len = context.scopes.len();
+        match context.scopes.get_mut(len - 2) {
+            Some(scope) => scope.create_var(id, v, true, pos, false)?,
+            None => context.create_var(id, v, true, pos, false)?
+        }
+        Ok(None)
+    } else { panic!("type checking doesn't work") }
+}
+fn _set(context: &mut Context) -> Result<Option<Value>, Error> {
+    let id = context.get_var(&"id".to_string()).unwrap().clone();
+    let v = context.get_var(&"v".to_string()).unwrap().clone();
+    if let Value::Key(id) = id {
+        if !context.is_mutable(&id).unwrap() { return Err(Error::Immutable(id)) }
+        match context.get_var_mut(&id) {
+            Some(value) => { *value = v; Ok(None) }
+            None => Err(Error::NotDefined(id))
+        }
+    } else { panic!("type checking doesn't work") }
+}
 // +
 fn _add_int(context: &mut Context) -> Result<Option<Value>, Error> {
     let n = context.get_var(&"n".to_string()).unwrap();
@@ -303,10 +341,35 @@ fn _vec(context: &mut Context) -> Result<Option<Value>, Error> {
 fn _type(context: &mut Context) -> Result<Option<Value>, Error> {
     Ok(Some(Value::Type(context.get_var(&"v".to_string()).unwrap().typ())))
 }
+// io
+fn _print(context: &mut Context) -> Result<Option<Value>, Error> {
+    let v = context.get_var(&"v".to_string()).unwrap();
+    println!("{v}");
+    Ok(None)
+}
 
 pub fn std_context() -> Result<Context, Error> {
     let mut context = Context::new();
     let pos = Position::new(0..0, 0..0, &String::from("<STD>"));
+    // let
+    context.create_native_fn(String::from("let"), NativFunction {
+        params: vec![("id".to_string(), Type::Key, false), ("v".to_string(), Type::Any, false)],
+        return_type: None,
+        body: _let,
+        inline: true
+    }, pos.clone())?;
+    context.create_native_fn(String::from("mut"), NativFunction {
+        params: vec![("id".to_string(), Type::Key, false), ("v".to_string(), Type::Any, false)],
+        return_type: None,
+        body: _mut,
+        inline: true
+    }, pos.clone())?;
+    context.create_native_fn(String::from("set"), NativFunction {
+        params: vec![("id".to_string(), Type::Key, false), ("v".to_string(), Type::Any, false)],
+        return_type: None,
+        body: _set,
+        inline: true
+    }, pos.clone())?;
     // +
     context.create_native_fn(String::from("+"), NativFunction {
         params: vec![("n".to_string(), Type::Int, false), ("nums".to_string(), Type::Int, true)],
@@ -522,6 +585,13 @@ pub fn std_context() -> Result<Context, Error> {
         params: vec![("v".to_string(), Type::Any, false)],
         return_type: Some(Type::Type),
         body: _type,
+        inline: false
+    }, pos.clone())?;
+    // print
+    context.create_native_fn(String::from("print"), NativFunction {
+        params: vec![("v".to_string(), Type::Any, false)],
+        return_type: None,
+        body: _print,
         inline: false
     }, pos.clone())?;
     Ok(context)

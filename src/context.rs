@@ -17,8 +17,8 @@ impl Scope {
         }
     }
     // create
-    pub fn create_var(&mut self, id: String, value: Value, mutable: bool, pos: Position) -> Result<(), Error> {
-        if self.vars.contains_key(&id) { return Err(Error::AlreadyDefined(id)) }
+    pub fn create_var(&mut self, id: String, value: Value, mutable: bool, pos: Position, overwrite: bool) -> Result<(), Error> {
+        if self.vars.contains_key(&id) && !overwrite { return Err(Error::AlreadyDefined(id)) }
         self.vars.insert(id, (value, mutable, pos));
         Ok(())
     }
@@ -82,6 +82,12 @@ impl Scope {
     pub fn get_var(&self, id: &String) -> Option<&Value> {
         match self.vars.get(id) {
             Some((value, _, _)) => Some(value),
+            None => None
+        }
+    }
+    pub fn get_var_pos(&self, id: &String) -> Option<&Position> {
+        match self.vars.get(id) {
+            Some((_, _, pos)) => Some(pos),
             None => None
         }
     }
@@ -220,11 +226,14 @@ pub struct Context {
 impl Context {
     pub fn new() -> Self { Self { scopes: vec![Scope::new()], global: Scope::new(), trace: vec![] } }
     pub fn call(context: &Context, inline: bool) -> Self {
-        let mut scopes = if inline { context.scopes.clone() } else { vec![Scope::new()] };
-        if inline { scopes.push(Scope::new()); }
-        Self { scopes, global: context.global.clone(), trace: context.trace.clone() }
+        Self {
+            scopes: if inline { context.scopes.clone() } else { vec![Scope::new()] },
+            global: context.global.clone(),
+            trace: context.trace.clone()
+        }
     }
-    pub fn after_call(&mut self, context: Context) {
+    pub fn after_call(&mut self, context: Context, inline: bool) {
+        if inline { self.scopes = context.scopes; }
         self.global = context.global;
         self.trace = context.trace;
     }
@@ -281,8 +290,8 @@ impl Context {
     // create
     pub fn create_var(&mut self, id: String, value: Value, mutable: bool, pos: Position, overwrite: bool) -> Result<(), Error> {
         match self.get_scope_var_mut(&id) {
-            None => self.scopes.last_mut().unwrap().create_var(id, value, mutable, pos),
-            Some(_) => if overwrite { Err(Error::AlreadyDefined(id)) } else { self.scopes.last_mut().unwrap().create_var(id, value, mutable, pos) }
+            None => self.scopes.last_mut().unwrap().create_var(id, value, mutable, pos, overwrite),
+            Some(_) => if overwrite { self.scopes.last_mut().unwrap().create_var(id, value, mutable, pos, overwrite) } else { Err(Error::AlreadyDefined(id)) }
         }
     }
     pub fn create_fn(&mut self, id: String, func: Function, pos: Position) -> Result<(), Error> {
@@ -348,6 +357,12 @@ impl Context {
         match self.get_scope_var(id) {
             Some(scope) => scope.get_var(id),
             None => self.global.get_var(id)
+        }
+    }
+    pub fn get_var_pos(&self, id: &String) -> Option<&Position> {
+        match self.get_scope_var(id) {
+            Some(scope) => scope.get_var_pos(id),
+            None => self.global.get_var_pos(id)
         }
     }
     pub fn is_mutable(&self, id: &String) -> Option<bool> {
