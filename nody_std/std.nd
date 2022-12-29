@@ -5,18 +5,18 @@
     #(do (? cond case else)))
 ; logic
 (def-global @not $(v bool) #(? (bool v) false true))
-(def-global @or $(v1 any v2 any) #(? (bool v1) v1 v2))
-(def-global @and $(v1 any v2 any)
-    #(? (bool v1)
-        (? (bool v2)
-            v2
+(def-global @or $(a any b any) #(? (bool a) a b))
+(def-global @and $(a any b any)
+    #(? (bool a)
+        (? (bool b)
+            b
             false)
         false))
-(def-global @xor $(v1 any v2 any)
-    #(? (and v1 (not (bool v2)))
-        v1
-        (? (and v2 (not (bool v1)))
-            v2
+(def-global @xor $(a any b any)
+    #(? (and a (not (bool b)))
+        a
+        (? (and b (not (bool a)))
+            b
             false)))
 ; math
 (def-global @sum $(nums (vec int))
