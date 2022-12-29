@@ -219,8 +219,14 @@ pub struct Context {
 }
 impl Context {
     pub fn new() -> Self { Self { scopes: vec![Scope::new()], global: Scope::new(), trace: vec![] } }
-    pub fn call(context: &Context) -> Self {
-        Self { scopes: vec![Scope::new()], global: context.global.clone(), trace: context.trace.clone() }
+    pub fn call(context: &Context, inline: bool) -> Self {
+        let mut scopes = if inline { context.scopes.clone() } else { vec![Scope::new()] };
+        if inline { scopes.push(Scope::new()); }
+        Self { scopes, global: context.global.clone(), trace: context.trace.clone() }
+    }
+    pub fn after_call(&mut self, context: Context) {
+        self.global = context.global;
+        self.trace = context.trace;
     }
     pub fn push(&mut self) { self.scopes.push(Scope::new()) }
     pub fn pop(&mut self) -> Option<Scope> { self.scopes.pop() }
@@ -228,14 +234,14 @@ impl Context {
     pub fn trace_pop(&mut self) -> Option<Position> { self.trace.pop() }
     // scope of var
     pub fn get_scope_var(&self, id: &String) -> Option<&Scope> {
-        for scope in self.scopes.iter() {
+        for scope in self.scopes.iter().rev() {
             if scope.get_var(id).is_some() { return Some(scope) }
         }
         if self.global.get_var(id).is_some() { return Some(&self.global) }
         None
     }
     pub fn get_scope_var_mut(&mut self, id: &String) -> Option<&mut Scope> {
-        for scope in self.scopes.iter_mut() {
+        for scope in self.scopes.iter_mut().rev() {
             if scope.get_var(id).is_some() { return Some(scope) }
         }
         if self.global.get_var(id).is_some() { return Some(&mut self.global) }
@@ -243,14 +249,14 @@ impl Context {
     }
     // scope of fn
     pub fn get_scope_fn(&self, id: &String, pattern: &Vec<Type>) -> Option<&Scope> {
-        for scope in self.scopes.iter() {
+        for scope in self.scopes.iter().rev() {
             if scope.get_fn(id, pattern).is_some() { return Some(scope) }
         }
         if self.global.get_fn(id, pattern).is_some() { return Some(&self.global) }
         None
     }
     pub fn get_scope_fn_mut(&mut self, id: &String, pattern: &Vec<Type>) -> Option<&mut Scope> {
-        for scope in self.scopes.iter_mut() {
+        for scope in self.scopes.iter_mut().rev() {
             if scope.get_fn_mut(id, pattern).is_some() { return Some(scope) }
         }
         if self.global.get_fn_mut(id, pattern).is_some() { return Some(&mut self.global) }
@@ -258,14 +264,14 @@ impl Context {
     }
     // scope of native fn
     pub fn get_scope_native_fn(&self, id: &String, pattern: &Vec<Type>) -> Option<&Scope> {
-        for scope in self.scopes.iter() {
+        for scope in self.scopes.iter().rev() {
             if scope.get_native_fn(id, pattern).is_some() { return Some(scope) }
         }
         if self.global.get_native_fn(id, pattern).is_some() { return Some(&self.global) }
         None
     }
     pub fn get_scope_native_fn_mut(&mut self, id: &String, pattern: &Vec<Type>) -> Option<&mut Scope> {
-        for scope in self.scopes.iter_mut() {
+        for scope in self.scopes.iter_mut().rev() {
             if scope.get_native_fn_mut(id, pattern).is_some() { return Some(scope) }
         }
         if self.global.get_native_fn_mut(id, pattern).is_some() { return Some(&mut self.global) }
@@ -273,10 +279,10 @@ impl Context {
     }
     
     // create
-    pub fn create_var(&mut self, id: String, value: Value, mutable: bool, pos: Position) -> Result<(), Error> {
+    pub fn create_var(&mut self, id: String, value: Value, mutable: bool, pos: Position, overwrite: bool) -> Result<(), Error> {
         match self.get_scope_var_mut(&id) {
             None => self.scopes.last_mut().unwrap().create_var(id, value, mutable, pos),
-            Some(_) => Err(Error::AlreadyDefined(id))
+            Some(_) => if overwrite { Err(Error::AlreadyDefined(id)) } else { self.scopes.last_mut().unwrap().create_var(id, value, mutable, pos) }
         }
     }
     pub fn create_fn(&mut self, id: String, func: Function, pos: Position) -> Result<(), Error> {
@@ -288,7 +294,7 @@ impl Context {
     pub fn create_native_fn(&mut self, id: String, func: NativFunction, pos: Position) -> Result<(), Error> {
         self.global.create_native_fn(id, func, pos)
     }
-    pub fn create_params(&mut self, params: &Vec<(String, Type, bool)>, values: Vec<Value>, poses: Vec<Position>) -> Result<(), Error> {
+    pub fn create_params(&mut self, params: &Vec<(String, Type, bool)>, values: Vec<Value>, poses: Vec<Position>, inline: bool) -> Result<(), Error> {
         let mut value_idx: usize = 0;
         for i in 0..params.len() {
             let (param, param_type, more) = &params[i];
@@ -301,9 +307,9 @@ impl Context {
                     vec_values.push(values[value_idx].clone());
                     value_idx += 1;
                 }
-                self.create_var(param.clone(), Value::Vector(vec_values, Some(param_type.clone())), false, pos);
+                self.create_var(param.clone(), Value::Vector(vec_values, Some(param_type.clone())), false, pos, inline)?;
             } else {
-                self.create_var(param.clone(), values[value_idx].clone(), false, poses[value_idx].clone())?;
+                self.create_var(param.clone(), values[value_idx].clone(), false, poses[value_idx].clone(), inline)?;
                 value_idx += 1;
             }
         }

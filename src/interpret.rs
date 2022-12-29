@@ -61,16 +61,18 @@ pub fn interpret(node: &Node, context: &mut Context) -> Result<(Option<Value>, R
             if let Node::Word { v, pos:_ } = head.as_ref() {
                 match context.get_native_fn(v, &types) {
                     Some(func) => {
-                        let mut func_context = Context::call(context);
-                        func_context.create_params(&func.params, values, poses)?;
-                        let value = (func.body)(&mut func_context)?;
-                        return Ok((value, Return::None))
+                        let mut func_context = Context::call(context, func.inline);
+                            func_context.create_params(&func.params, values, poses, func.inline)?;
+                            let value = (func.body)(&mut func_context)?;
+                            context.after_call(func_context);
+                            return Ok((value, Return::None))
                     }
                     None => match context.get_fn(v, &types) {
                         Some(func) => {
-                            let mut func_context = Context::call(context);
-                            func_context.create_params(&func.params, values, poses)?;
+                            let mut func_context = Context::call(context, func.inline);
+                            func_context.create_params(&func.params, values, poses, func.inline)?;
                             let (value, _) = interpret(&func.body, &mut func_context)?;
+                            context.after_call(func_context);
                             return Ok((value, Return::None))
                         }
                         None => match context.get_var(v) {
@@ -89,9 +91,10 @@ pub fn interpret(node: &Node, context: &mut Context) -> Result<(Option<Value>, R
                 match head_value {
                     Value::Type(typ) => match context.get_native_fn(&typ.to_string(), &types) {
                         Some(func) => {
-                            let mut func_context = Context::call(context);
-                            func_context.create_params(&func.params, values, poses)?;
+                            let mut func_context = Context::call(context, func.inline);
+                            func_context.create_params(&func.params, values, poses, func.inline)?;
                             let value = (func.body)(&mut func_context)?;
+                            context.after_call(func_context);
                             return Ok((value, Return::None))
                         }
                         None => if context.fn_exists(&typ.to_string()) || context.native_fn_exists(&typ.to_string()) {

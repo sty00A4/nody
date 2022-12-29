@@ -4,7 +4,8 @@ use crate::*;
 pub struct Function {
     pub params: Vec<(String, Type, bool)>,
     pub return_type: Option<Type>,
-    pub body: NodeRef
+    pub body: NodeRef,
+    pub inline: bool
 }
 impl Function {
     pub fn type_params(&self) -> Vec<Type> {
@@ -56,7 +57,8 @@ impl PartialEq for Function {
 pub struct NativFunction {
     pub params: Vec<(String, Type, bool)>,
     pub return_type: Option<Type>,
-    pub body: fn(&mut Context) -> Result<Option<Value>, Error>
+    pub body: fn(&mut Context) -> Result<Option<Value>, Error>,
+    pub inline: bool
 }
 impl NativFunction {
     pub fn type_params(&self) -> Vec<Type> {

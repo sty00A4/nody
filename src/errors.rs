@@ -11,6 +11,7 @@ impl Position {
 
 #[derive(Debug, Clone)]
 pub enum Error {
+    TargetFileNotFound(String),
     ParseFloat(String), ParseInt(String), ParseIntOverflow(String), ParseIntNegOverflow(String),
     ParseChar(String), ParseBool(String), ParseString(String),
     UnclosedChar, UnclosedString,
@@ -23,6 +24,7 @@ pub enum Error {
 impl Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Self::TargetFileNotFound(path) => write!(f, "ERROR: {path:?} couldn't be found in the current directory"),
             Self::ParseFloat(n) => write!(f, "ERROR: {n:?} couldn't be parsed as a float"),
             Self::ParseInt(n) => write!(f, "ERROR: {n:?} couldn't be parsed as an int"),
             Self::ParseIntOverflow(n) => write!(f, "ERROR: {n:?} overflowed max int64 value"),

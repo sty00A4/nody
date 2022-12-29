@@ -311,184 +311,218 @@ pub fn std_context() -> Result<Context, Error> {
     context.create_native_fn(String::from("+"), NativFunction {
         params: vec![("n".to_string(), Type::Int, false), ("nums".to_string(), Type::Int, true)],
         return_type: Some(Type::Int),
-        body: _add_int
+        body: _add_int,
+        inline: false
     }, pos.clone())?;
     context.create_native_fn(String::from("+"), NativFunction {
         params: vec![("n".to_string(), Type::Float, false), ("nums".to_string(), Type::Float, true)],
         return_type: Some(Type::Float),
-        body: _add_float
+        body: _add_float,
+        inline: false
     }, pos.clone())?;
     context.create_native_fn(String::from("+"), NativFunction {
         params: vec![("n".to_string(), Type::String, false), ("nums".to_string(), Type::String, true)],
         return_type: Some(Type::String),
-        body: _add_str
+        body: _add_str,
+        inline: false
     }, pos.clone())?;
     // -
     context.create_native_fn(String::from("-"), NativFunction {
         params: vec![("n".to_string(), Type::Int, false)],
         return_type: Some(Type::Int),
-        body: _neg_int
+        body: _neg_int,
+        inline: false
     }, pos.clone())?;
     context.create_native_fn(String::from("-"), NativFunction {
         params: vec![("n".to_string(), Type::Float, false)],
         return_type: Some(Type::Float),
-        body: _neg_float
+        body: _neg_float,
+        inline: false
     }, pos.clone())?;
     context.create_native_fn(String::from("-"), NativFunction {
         params: vec![("n".to_string(), Type::Int, false), ("nums".to_string(), Type::Int, true)],
         return_type: Some(Type::Int),
-        body: _sub_int
+        body: _sub_int,
+        inline: false
     }, pos.clone())?;
     context.create_native_fn(String::from("-"), NativFunction {
         params: vec![("n".to_string(), Type::Float, false), ("nums".to_string(), Type::Float, true)],
         return_type: Some(Type::Float),
-        body: _sub_float
+        body: _sub_float,
+        inline: false
     }, pos.clone())?;
     // *
     context.create_native_fn(String::from("*"), NativFunction {
         params: vec![("n".to_string(), Type::Int, false), ("nums".to_string(), Type::Int, true)],
         return_type: Some(Type::Int),
-        body: _mul_int
+        body: _mul_int,
+        inline: false
     }, pos.clone())?;
     context.create_native_fn(String::from("*"), NativFunction {
         params: vec![("n".to_string(), Type::Float, false), ("nums".to_string(), Type::Float, true)],
         return_type: Some(Type::Float),
-        body: _mul_float
+        body: _mul_float,
+        inline: false
     }, pos.clone())?;
     context.create_native_fn(String::from("*"), NativFunction {
         params: vec![("s".to_string(), Type::String, false), ("n".to_string(), Type::Int, false)],
         return_type: Some(Type::String),
-        body: _mul_str
+        body: _mul_str,
+        inline: false
     }, pos.clone())?;
     // /
     context.create_native_fn(String::from("/"), NativFunction {
         params: vec![("n".to_string(), Type::Int, false), ("nums".to_string(), Type::Int, true)],
         return_type: Some(Type::Int),
-        body: _div_int
+        body: _div_int,
+        inline: false
     }, pos.clone())?;
     context.create_native_fn(String::from("/"), NativFunction {
         params: vec![("n".to_string(), Type::Float, false), ("nums".to_string(), Type::Float, true)],
         return_type: Some(Type::Float),
-        body: _div_float
+        body: _div_float,
+        inline: false
     }, pos.clone())?;
     // %
     context.create_native_fn(String::from("%"), NativFunction {
         params: vec![("n".to_string(), Type::Int, false), ("nums".to_string(), Type::Int, true)],
         return_type: Some(Type::Int),
-        body: _mod_int
+        body: _mod_int,
+        inline: false
     }, pos.clone())?;
     context.create_native_fn(String::from("%"), NativFunction {
         params: vec![("n".to_string(), Type::Float, false), ("nums".to_string(), Type::Float, true)],
         return_type: Some(Type::Float),
-        body: _mod_float
+        body: _mod_float,
+        inline: false
     }, pos.clone())?;
     // int
     context.create_native_fn(String::from("int"), NativFunction {
         params: vec![("v".to_string(), Type::Int, false)],
         return_type: Some(Type::Int),
-        body: _int_int
+        body: _int_int,
+        inline: false
     }, pos.clone())?;
     context.create_native_fn(String::from("int"), NativFunction {
         params: vec![("v".to_string(), Type::Float, false)],
         return_type: Some(Type::Int),
-        body: _int_float
+        body: _int_float,
+        inline: false
     }, pos.clone())?;
     context.create_native_fn(String::from("int"), NativFunction {
         params: vec![("v".to_string(), Type::Char, false)],
         return_type: Some(Type::Int),
-        body: _int_char
+        body: _int_char,
+        inline: false
     }, pos.clone())?;
     context.create_native_fn(String::from("int"), NativFunction {
         params: vec![("v".to_string(), Type::Bool, false)],
         return_type: Some(Type::Int),
-        body: _int_bool
+        body: _int_bool,
+        inline: false
     }, pos.clone())?;
     context.create_native_fn(String::from("int"), NativFunction {
         params: vec![("v".to_string(), Type::String, false)],
         return_type: Some(Type::Int),
-        body: _int_str
+        body: _int_str,
+        inline: false
     }, pos.clone())?;
     // float
     context.create_native_fn(String::from("float"), NativFunction {
         params: vec![("v".to_string(), Type::Int, false)],
         return_type: Some(Type::Float),
-        body: _float_int
+        body: _float_int,
+        inline: false
     }, pos.clone())?;
     context.create_native_fn(String::from("float"), NativFunction {
         params: vec![("v".to_string(), Type::Float, false)],
         return_type: Some(Type::Float),
-        body: _float_float
+        body: _float_float,
+        inline: false
     }, pos.clone())?;
     context.create_native_fn(String::from("float"), NativFunction {
         params: vec![("v".to_string(), Type::String, false)],
         return_type: Some(Type::Float),
-        body: _float_str
+        body: _float_str,
+        inline: false
     }, pos.clone())?;
     // bool
     context.create_native_fn(String::from("bool"), NativFunction {
         params: vec![("v".to_string(), Type::Int, false)],
         return_type: Some(Type::Bool),
-        body: _bool_int
+        body: _bool_int,
+        inline: false
     }, pos.clone())?;
     context.create_native_fn(String::from("bool"), NativFunction {
         params: vec![("v".to_string(), Type::Float, false)],
         return_type: Some(Type::Bool),
-        body: _bool_float
+        body: _bool_float,
+        inline: false
     }, pos.clone())?;
     context.create_native_fn(String::from("bool"), NativFunction {
         params: vec![("v".to_string(), Type::Char, false)],
         return_type: Some(Type::Bool),
-        body: _bool_char
+        body: _bool_char,
+        inline: false
     }, pos.clone())?;
     context.create_native_fn(String::from("bool"), NativFunction {
         params: vec![("v".to_string(), Type::Bool, false)],
         return_type: Some(Type::Bool),
-        body: _bool_bool
+        body: _bool_bool,
+        inline: false
     }, pos.clone())?;
     context.create_native_fn(String::from("bool"), NativFunction {
         params: vec![("v".to_string(), Type::String, false)],
         return_type: Some(Type::Bool),
-        body: _bool_str
+        body: _bool_str,
+        inline: false
     }, pos.clone())?;
     // char
     context.create_native_fn(String::from("char"), NativFunction {
         params: vec![("v".to_string(), Type::Int, false)],
         return_type: Some(Type::Char),
-        body: _char_int
+        body: _char_int,
+        inline: false
     }, pos.clone())?;
     context.create_native_fn(String::from("char"), NativFunction {
         params: vec![("v".to_string(), Type::Char, false)],
         return_type: Some(Type::Char),
-        body: _char_char
+        body: _char_char,
+        inline: false
     }, pos.clone())?;
     context.create_native_fn(String::from("char"), NativFunction {
         params: vec![("v".to_string(), Type::String, false)],
         return_type: Some(Type::Char),
-        body: _char_str
+        body: _char_str,
+        inline: false
     }, pos.clone())?;
     // str
     context.create_native_fn(String::from("str"), NativFunction {
         params: vec![("v".to_string(), Type::Any, false)],
         return_type: Some(Type::String),
-        body: _str
+        body: _str,
+        inline: false
     }, pos.clone())?;
     // key
     context.create_native_fn(String::from("key"), NativFunction {
         params: vec![("v".to_string(), Type::Any, false)],
         return_type: Some(Type::Key),
-        body: _key
+        body: _key,
+        inline: false
     }, pos.clone())?;
     // vec
     context.create_native_fn(String::from("vec"), NativFunction {
         params: vec![("t".to_string(), Type::Type, false)],
         return_type: Some(Type::Vector(Some(Box::new(Type::Any)))),
-        body: _vec
+        body: _vec,
+        inline: false
     }, pos.clone())?;
     // type
     context.create_native_fn(String::from("type"), NativFunction {
         params: vec![("v".to_string(), Type::Any, false)],
         return_type: Some(Type::Type),
-        body: _type
+        body: _type,
+        inline: false
     }, pos.clone())?;
     Ok(context)
 }
