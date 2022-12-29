@@ -87,6 +87,7 @@ impl NativFunction {
         pattern.get(pattern_idx) == None
     }
     pub fn params_match(&self, params: &Vec<(String, Type, bool)>) -> bool {
+        if self.params.len() != params.len() { return false }
         for i in 0..self.params.len() {
             if params.get(i) == None { return false }
             let (_, param_type1, more1) = &self.params[i];
