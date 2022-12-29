@@ -232,6 +232,39 @@ fn _float_str(context: &mut Context) -> Result<Option<Value>, Error> {
         }
     } else { panic!("type checking doesn't work") }
 }
+// bool
+fn _bool_int(context: &mut Context) -> Result<Option<Value>, Error> {
+    let v = context.get_var(&"v".to_string()).unwrap();
+    if let Value::Int(v) = v {
+        Ok(Some(Value::Bool(*v != 0)))
+    } else { panic!("type checking doesn't work") }
+}
+fn _bool_float(context: &mut Context) -> Result<Option<Value>, Error> {
+    let v = context.get_var(&"v".to_string()).unwrap();
+    if let Value::Float(v) = v {
+        Ok(Some(Value::Bool(*v != 0.0)))
+    } else { panic!("type checking doesn't work") }
+}
+fn _bool_char(context: &mut Context) -> Result<Option<Value>, Error> {
+    let v = context.get_var(&"v".to_string()).unwrap();
+    if let Value::Char(v) = v {
+        Ok(Some(Value::Bool(*v as u8 != 0)))
+    } else { panic!("type checking doesn't work") }
+}
+fn _bool_bool(context: &mut Context) -> Result<Option<Value>, Error> {
+    Ok(Some(context.get_var(&"v".to_string()).unwrap().clone()))
+}
+fn _bool_str(context: &mut Context) -> Result<Option<Value>, Error> {
+    let v = context.get_var(&"v".to_string()).unwrap();
+    if let Value::String(v) = v {
+        if let Ok(v) = v.parse::<bool>() {
+            Ok(Some(Value::Bool(v)))
+        } else {
+            Err(Error::ParseBool(v.clone()))
+        }
+    } else { panic!("type checking doesn't work") }
+}
+
 pub fn std_context() -> Result<Context, Error> {
     let mut context = Context::new();
     let pos = Position::new(0..0, 0..0, &String::from("<STD>"));
@@ -351,6 +384,32 @@ pub fn std_context() -> Result<Context, Error> {
         params: vec![("v".to_string(), Type::String, false)],
         return_type: Some(Type::Float),
         body: _float_str
+    }, pos.clone())?;
+    // bool
+    context.create_native_fn(String::from("bool"), NativFunction {
+        params: vec![("v".to_string(), Type::Int, false)],
+        return_type: Some(Type::Bool),
+        body: _bool_int
+    }, pos.clone())?;
+    context.create_native_fn(String::from("bool"), NativFunction {
+        params: vec![("v".to_string(), Type::Float, false)],
+        return_type: Some(Type::Bool),
+        body: _bool_float
+    }, pos.clone())?;
+    context.create_native_fn(String::from("bool"), NativFunction {
+        params: vec![("v".to_string(), Type::Char, false)],
+        return_type: Some(Type::Bool),
+        body: _bool_char
+    }, pos.clone())?;
+    context.create_native_fn(String::from("bool"), NativFunction {
+        params: vec![("v".to_string(), Type::Bool, false)],
+        return_type: Some(Type::Bool),
+        body: _bool_bool
+    }, pos.clone())?;
+    context.create_native_fn(String::from("bool"), NativFunction {
+        params: vec![("v".to_string(), Type::String, false)],
+        return_type: Some(Type::Bool),
+        body: _bool_str
     }, pos.clone())?;
     Ok(context)
 }

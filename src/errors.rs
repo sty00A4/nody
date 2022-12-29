@@ -12,6 +12,7 @@ impl Position {
 #[derive(Debug, Clone)]
 pub enum Error {
     ParseFloat(String), ParseInt(String), ParseIntOverflow(String), ParseIntNegOverflow(String),
+    ParseBool(String),
     NotDefined(String), AlreadyDefined(String), Immutable(String),
     Expected, ExpectedType(Type, Type), ExpectedTypes(Vec<Type>, Type),
     FunctionPatternNotFound(String, Vec<Type>),
@@ -24,6 +25,7 @@ impl Display for Error {
             Self::ParseInt(n) => write!(f, "ERROR: {n} couldn't be parsed as an int"),
             Self::ParseIntOverflow(n) => write!(f, "ERROR: {n} overflowed max int64 value"),
             Self::ParseIntNegOverflow(n) => write!(f, "ERROR: {n} underflowed min int64 value"),
+            Self::ParseBool(n) => write!(f, "ERROR: {n} couldn't be parsed as an bool"),
             Self::NotDefined(id) => write!(f, "ERROR: {id:?} is not defined"),
             Self::AlreadyDefined(id) => write!(f, "ERROR: {id:?} is already defined"),
             Self::Immutable(id) => write!(f, "ERROR: {id:?} is immutable"),
@@ -34,7 +36,7 @@ impl Display for Error {
             Self::FunctionPatternNotFound(id, types) => write!(f, "ERROR: no function {id:?} found with pattern ({})",
             types.iter().map(|x| x.to_string()).collect::<Vec<String>>().join(", ")),
             Self::InvalidHeadValue(v) => write!(f, "ERROR: unexpected {} value for head", v.typ()),
-            Self::InvalidHeadCastType(t) => write!(f, "ERROR: unexpected {t} type for casting"),
+            Self::InvalidHeadCastType(t) => write!(f, "ERROR: invalid cast type {t}"),
         }
     }
 }
