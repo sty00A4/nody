@@ -479,7 +479,7 @@ pub fn std_context() -> Result<Context, Error> {
         return_type: Some(Type::Any),
         body: _if_closure,
         inline: false
-    }, pos.clone())?;
+    }, pos.clone())?; // replace with nody function later
     context.create_native_fn(String::from("if"), NativFunction {
         params: vec![
             ("cond".to_string(), Type::Bool, false),
@@ -489,7 +489,7 @@ pub fn std_context() -> Result<Context, Error> {
         return_type: Some(Type::Any),
         body: _if_else_closure,
         inline: false
-    }, pos.clone())?;
+    }, pos.clone())?; // replace with nody function later
     // +
     context.create_native_fn(String::from("+"), NativFunction {
         params: vec![("n".to_string(), Type::Int, false), ("nums".to_string(), Type::Int, true)],

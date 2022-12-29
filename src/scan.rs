@@ -200,6 +200,7 @@ impl Scanner {
                     Err(_) => Err(Error::ParseChar(c))
                 }
             }
+            // numbers
             _ if self.get_char().is_ascii_digit() => {
                 let (start_ln, start_col) = (self.ln, self.col);
                 let mut number = String::new();
@@ -229,6 +230,7 @@ impl Scanner {
                     }
                 }
             }
+            // words
             _ => {
                 let (start_ln, start_col) = (self.ln, self.col);
                 let mut word = String::new();
