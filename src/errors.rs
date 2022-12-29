@@ -17,7 +17,7 @@ pub enum Error {
     NotDefined(String), AlreadyDefined(String), Immutable(String),
     Expected, ExpectedType(Type, Type), ExpectedTypes(Vec<Type>, Type),
     FunctionPatternNotFound(String, Vec<Type>),
-    InvalidHeadValue(Value), InvalidHeadCastType(Type)
+    InvalidHeadValue(Value), InvalidHeadCastType(Type), InvalidCastBetween(Type, Type)
 }
 impl Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -42,6 +42,7 @@ impl Display for Error {
             types.iter().map(|x| x.to_string()).collect::<Vec<String>>().join(", ")),
             Self::InvalidHeadValue(v) => write!(f, "ERROR: unexpected {} value for head", v.typ()),
             Self::InvalidHeadCastType(t) => write!(f, "ERROR: invalid cast type {t}"),
+            Self::InvalidCastBetween(t1, t2) => write!(f, "ERROR: invalid cast from {t2} to {t1}"),
         }
     }
 }

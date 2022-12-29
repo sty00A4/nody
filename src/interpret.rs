@@ -84,6 +84,7 @@ pub fn interpret(node: &Node, context: &mut Context) -> Result<(Option<Value>, R
                 }
             }
             if let Some(head_value) = interpret(head, context)?.0 {
+                if types.len() == 0 { return Ok((Some(head_value), Return::None)) }
                 match head_value {
                     Value::Type(typ) => match context.get_native_fn(&typ.to_string(), &types) {
                         Some(func) => {
@@ -92,7 +93,11 @@ pub fn interpret(node: &Node, context: &mut Context) -> Result<(Option<Value>, R
                             let value = (func.body)(&mut func_context)?;
                             return Ok((value, Return::None))
                         }
-                        None => Err(Error::InvalidHeadCastType(typ.clone()))
+                        None => if context.fn_exists(&typ.to_string()) || context.native_fn_exists(&typ.to_string()) {
+                            Err(Error::InvalidCastBetween(typ.clone(), types[0].clone()))
+                        } else {
+                            Err(Error::InvalidHeadCastType(typ.clone()))
+                        }
                     }
                     _ => Err(Error::InvalidHeadValue(head_value.clone()))
                 }
