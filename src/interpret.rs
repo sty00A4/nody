@@ -9,6 +9,24 @@ pub fn interpret(node: &Node, context: &mut Context) -> Result<(Option<Value>, R
         Node::Char { v, pos:_ } => Ok((Some(Value::Char(*v)), Return::None)),
         Node::Bool { v, pos:_ } => Ok((Some(Value::Bool(*v)), Return::None)),
         Node::String { v, pos:_ } => Ok((Some(Value::String(v.clone())), Return::None)),
+        Node::Vector { nodes, pos:_ } => {
+            let mut values: Vec<Value> = vec![];
+            let mut typ: Option<Type> = None;
+            for n in nodes.iter() {
+                let (value, _) = interpret(n, context)?;
+                if value.is_none() {
+                    return Err(Error::Expected)
+                }
+                let value = value.unwrap();
+                if typ.is_none() {
+                    typ = Some(value.typ());
+                } else if typ != Some(value.typ()) {
+                    return Err(Error::ExpectedType(typ.unwrap(), value.typ()))
+                }
+                values.push(value);
+            }
+            Ok((Some(Value::Vector(values, typ)), Return::None))
+        }
         Node::Type { v, pos:_ } => Ok((Some(Value::Type(v.clone())), Return::None)),
         Node::Word { v, pos:_ } => match context.get_var(v) {
             Some(v) => Ok((Some(v.clone()), Return::None)),
