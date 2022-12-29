@@ -24,8 +24,10 @@ impl Function {
             if pattern.get(pattern_idx) == None { return false }
             let (_, param_type, more) = &self.params[i];
             if *more {
-                if let Some(typ) = pattern.get(pattern_idx) { pattern_idx += 1; } // one of the param_typ at least
-                else { return false }
+                if let Some(typ) = pattern.get(pattern_idx) { // one of the param_typ type has to be here
+                    if typ != param_type { return false }
+                    pattern_idx += 1;
+                } else { return false }
                 while let Some(typ) = pattern.get(pattern_idx) { // skip through the rest
                     if typ != param_type { break }
                     pattern_idx += 1;
