@@ -99,6 +99,24 @@ pub fn interpret(node: &Node, context: &mut Context) -> Result<(Option<Value>, R
                             Err(Error::InvalidHeadCastType(typ.clone()))
                         }
                     }
+                    Value::Vector(vec_values, typ) => if values.len() == 1 {
+                        match &values[0] {
+                            Value::Int(idx) => if *idx < 0 {
+                                match vec_values.get(vec_values.len() - idx.abs() as usize) {
+                                    Some(value) => Ok((Some(value.clone()), Return::None)),
+                                    None => Err(Error::IndexOutOfRange(vec_values.len() - idx.abs() as usize, vec_values.len()))
+                                }
+                            } else {
+                                match vec_values.get(*idx as usize) {
+                                    Some(value) => Ok((Some(value.clone()), Return::None)),
+                                    None => Err(Error::IndexOutOfRange(*idx as usize, vec_values.len()))
+                                }
+                            }
+                            _ => Err(Error::ExpectedTypes(vec![Type::Int], types[0].clone()))
+                        }
+                    } else {
+                        todo!()
+                    }
                     _ => Err(Error::InvalidHeadValue(head_value.clone()))
                 }
             } else {
