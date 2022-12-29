@@ -18,3 +18,9 @@
         (? (and v2 (not (bool v1)))
             v2
             false)))
+; math
+; (def-global @sum $(nums (vec int))
+;     #{
+;         (mut res 0)
+;         ()
+;     })

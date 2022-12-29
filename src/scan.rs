@@ -85,7 +85,7 @@ impl Scanner {
         let mut nodes: Vec<Node> = vec![];
         while self.get() != '\0' {
             let node = self.node()?; self.advance_ws();
-            nodes.push(node);
+            if let Some(node) = node { nodes.push(node); }
         }
         if nodes.len() == 1 {
             Ok(nodes[0].clone())
@@ -93,15 +93,16 @@ impl Scanner {
             Ok(Node::Body { nodes, pos: Position::new(0..self.ln, 0..self.col, &self.path) })
         }
     }
-    pub fn node(&mut self) -> Result<Node, Error> {
+    pub fn node(&mut self) -> Result<Option<Node>, Error> {
+        if self.get() == '\0' { return Ok(None) }
         self.advance_ws();
         match self.get() {
             ';' => {
-                while self.get() == ';' {
-                    while self.get() != '\n' { self.advance(); }
-                    self.advance(); self.advance_ws();
+                while self.get() == ';' && self.get() != '\0' {
+                    while self.get() != '\n' && self.get() != '\0' { self.advance(); }
+                    self.advance_ws();
                 }
-                self.node()
+                Ok(None)
             }
             '(' => {
                 let (start_ln, start_col) = (self.ln, self.col);
@@ -110,16 +111,21 @@ impl Scanner {
                     self.advance();
                     let (stop_ln, stop_col) = (self.ln, self.col);
                     self.advance_ws();
-                    return Ok(Node::None { pos: Position::new(start_ln..stop_ln, start_col..stop_col, &self.path) })
+                    return Ok(Some(Node::None { pos: Position::new(start_ln..stop_ln, start_col..stop_col, &self.path) }))
                 }
-                let head = Box::new(self.node()?); self.advance_ws();
+                let head = self.node()?; self.advance_ws();
+                if head.is_none() { return Err(Error::UnexpectedEnd) }
+                let head = Box::new(head.unwrap());
                 let mut args: Vec<Box<Node>> = vec![];
                 while self.get() != ')' && self.get() != '\0' {
-                    let arg = Box::new(self.node()?); self.advance_ws();
+                    let arg = self.node()?; self.advance_ws();
+                    if arg.is_none() { return Err(Error::UnexpectedEnd) }
+                    let arg = Box::new(arg.unwrap());
                     args.push(arg);
                 }
+                if self.get() == '\0' { return Err(Error::UnexpectedEnd) }
                 self.advance();
-                Ok(Node::Node { head, args, pos: Position::new(start_ln..self.ln, start_col..self.col, &self.path) })
+                Ok(Some(Node::Node { head, args, pos: Position::new(start_ln..self.ln, start_col..self.col, &self.path) }))
             }
             '{' => {
                 let (start_ln, start_col) = (self.ln, self.col);
@@ -127,10 +133,13 @@ impl Scanner {
                 let mut nodes: Vec<Node> = vec![];
                 while self.get() != '}' && self.get() != '\0' {
                     let node = self.node()?; self.advance_ws();
+                    if node.is_none() { return Err(Error::UnexpectedEnd) }
+                    let node = node.unwrap();
                     nodes.push(node);
                 }
+                if self.get() == '\0' { return Err(Error::UnexpectedEnd) }
                 self.advance();
-                Ok(Node::Body { nodes, pos: Position::new(start_ln..self.ln, start_col..self.col, &self.path) })
+                Ok(Some(Node::Body { nodes, pos: Position::new(start_ln..self.ln, start_col..self.col, &self.path) }))
             }
             '[' => {
                 let (start_ln, start_col) = (self.ln, self.col);
@@ -138,10 +147,13 @@ impl Scanner {
                 let mut nodes: Vec<Node> = vec![];
                 while self.get() != ']' && self.get() != '\0' {
                     let node = self.node()?; self.advance_ws();
+                    if node.is_none() { return Err(Error::UnexpectedEnd) }
+                    let node = node.unwrap();
                     nodes.push(node);
                 }
+                if self.get() == '\0' { return Err(Error::UnexpectedEnd) }
                 self.advance();
-                Ok(Node::Vector { nodes, pos: Position::new(start_ln..self.ln, start_col..self.col, &self.path) })
+                Ok(Some(Node::Vector { nodes, pos: Position::new(start_ln..self.ln, start_col..self.col, &self.path) }))
             }
             '@' => {
                 let (start_ln, start_col) = (self.ln, self.col);
@@ -151,13 +163,16 @@ impl Scanner {
                     word.push(self.get());
                     self.advance();
                 }
-                Ok(Node::Key { v: word, pos: Position::new(start_ln..self.ln, start_col..self.col, &self.path) })
+                if self.get() == '\0' { return Err(Error::UnexpectedEnd) }
+                Ok(Some(Node::Key { v: word, pos: Position::new(start_ln..self.ln, start_col..self.col, &self.path) }))
             }
             '#' => {
                 let (start_ln, start_col) = (self.ln, self.col);
                 self.advance(); self.advance_ws();
                 let node = self.node()?;
-                Ok(Node::Closure { node: Box::new(node), pos: Position::new(start_ln..self.ln, start_col..self.col, &self.path) })
+                if node.is_none() { return Err(Error::UnexpectedEnd) }
+                let node = Box::new(node.unwrap());
+                Ok(Some(Node::Closure { node, pos: Position::new(start_ln..self.ln, start_col..self.col, &self.path) }))
             }
             '$' => {
                 let (start_ln, start_col) = (self.ln, self.col);
@@ -166,7 +181,7 @@ impl Scanner {
                     return Err(Error::ExpectedSymbol('(', self.get()))
                 }
                 self.advance(); self.advance_ws();
-                let mut params = vec![];
+                let mut params: Vec<(String, Box<Node>, bool)> = vec![];
                 while self.get() != ')' && self.get() != '\0' {
                     let (param_start_ln, param_start_col) = (self.ln, self.col);
                     let mut param = String::new();
@@ -177,7 +192,9 @@ impl Scanner {
                     if param.len() == 0 { return Err(Error::ExpectedWord) }
                     self.advance_ws();
                     if SYMBOLS.contains(&self.get()) {
-                        let typ = Box::new(self.node()?);
+                        let typ = self.node()?;
+                        if typ.is_none() { return Err(Error::UnexpectedEnd) }
+                        let typ = Box::new(typ.unwrap());
                         let pos = Position::new(start_ln..start_ln, start_col..start_col, &self.path);
                         let pos = Position::between(pos, typ.pos().clone());
                         let mut more = self.get() == '*';
@@ -215,8 +232,9 @@ impl Scanner {
                         params.push((param, typ, more));
                     }
                 }
+                if self.get() == '\0' { return Err(Error::UnexpectedEnd) }
                 self.advance();
-                Ok(Node::Params { params, pos: Position::new(start_ln..self.ln, start_col..self.col, &self.path) })
+                Ok(Some(Node::Params { params, pos: Position::new(start_ln..self.ln, start_col..self.col, &self.path) }))
             }
             '"' => {
                 let (start_ln, start_col) = (self.ln, self.col);
@@ -240,7 +258,7 @@ impl Scanner {
                 if self.get() == '\0' { return Err(Error::UnclosedString) }
                 self.advance();
                 match string.parse::<String>() {
-                    Ok(string) => Ok(Node::String { v: string, pos: Position::new(start_ln..self.ln, start_col..self.col, &self.path) }),
+                    Ok(string) => Ok(Some(Node::String { v: string, pos: Position::new(start_ln..self.ln, start_col..self.col, &self.path) })),
                     Err(_) => Err(Error::ParseString(string))
                 }
             }
@@ -266,7 +284,7 @@ impl Scanner {
                 if self.get() == '\0' { return Err(Error::UnclosedChar) }
                 self.advance();
                 match c.parse::<char>() {
-                    Ok(c) => Ok(Node::Char { v: c, pos: Position::new(start_ln..self.ln, start_col..self.col, &self.path) }),
+                    Ok(c) => Ok(Some(Node::Char { v: c, pos: Position::new(start_ln..self.ln, start_col..self.col, &self.path) })),
                     Err(_) => Err(Error::ParseChar(c))
                 }
             }
@@ -286,12 +304,12 @@ impl Scanner {
                         self.advance();
                     }
                     match number.parse() {
-                        Ok(number) => Ok(Node::Float { v: number, pos: Position::new(start_ln..self.ln, start_col..self.col, &self.path) }),
+                        Ok(number) => Ok(Some(Node::Float { v: number, pos: Position::new(start_ln..self.ln, start_col..self.col, &self.path) })),
                         Err(_) => Err(Error::ParseFloat(number))
                     }
                 } else {
                     match number.parse() {
-                        Ok(number) => Ok(Node::Int { v: number, pos: Position::new(start_ln..self.ln, start_col..self.col, &self.path) }),
+                        Ok(number) => Ok(Some(Node::Int { v: number, pos: Position::new(start_ln..self.ln, start_col..self.col, &self.path) })),
                         Err(e) => match e.kind() {
                             IntErrorKind::PosOverflow => Err(Error::ParseIntOverflow(number)),
                             IntErrorKind::NegOverflow => Err(Error::ParseIntNegOverflow(number)),
@@ -309,24 +327,24 @@ impl Scanner {
                     self.advance();
                 }
                 let pos = Position::new(start_ln..self.ln, start_col..self.col, &self.path);
-                match word.as_str() {
-                    "true"      => Ok(Node::Bool { v: true, pos }),
-                    "false"     => Ok(Node::Bool { v: false, pos }),
-                    "any"       => Ok(Node::Type { v: Type::Any, pos }),
-                    "int"       => Ok(Node::Type { v: Type::Int, pos }),
-                    "float"     => Ok(Node::Type { v: Type::Float, pos }),
-                    "char"      => Ok(Node::Type { v: Type::Char, pos }),
-                    "bool"      => Ok(Node::Type { v: Type::Bool, pos }),
-                    "str"       => Ok(Node::Type { v: Type::String, pos }),
-                    "key"       => Ok(Node::Type { v: Type::Key, pos }),
-                    "closure"   => Ok(Node::Type { v: Type::Closure, pos }),
-                    "vec"       => Ok(Node::Type { v: Type::Vector(None), pos }),
-                    "obj"       => Ok(Node::Type { v: Type::Object, pos }),
-                    "fn"        => Ok(Node::Type { v: Type::Function(vec![], None), pos }),
-                    "native-fn" => Ok(Node::Type { v: Type::NativFunction(vec![], None), pos }),
-                    "type"      => Ok(Node::Type { v: Type::Type, pos }),
-                    _ => Ok(Node::Word { v: word, pos })
-                }
+                Ok(Some(match word.as_str() {
+                    "true"      => Node::Bool { v: true, pos },
+                    "false"     => Node::Bool { v: false, pos },
+                    "any"       => Node::Type { v: Type::Any, pos },
+                    "int"       => Node::Type { v: Type::Int, pos },
+                    "float"     => Node::Type { v: Type::Float, pos },
+                    "char"      => Node::Type { v: Type::Char, pos },
+                    "bool"      => Node::Type { v: Type::Bool, pos },
+                    "str"       => Node::Type { v: Type::String, pos },
+                    "key"       => Node::Type { v: Type::Key, pos },
+                    "closure"   => Node::Type { v: Type::Closure, pos },
+                    "vec"       => Node::Type { v: Type::Vector(None), pos },
+                    "obj"       => Node::Type { v: Type::Object, pos },
+                    "fn"        => Node::Type { v: Type::Function(vec![], None), pos },
+                    "native-fn" => Node::Type { v: Type::NativFunction(vec![], None), pos },
+                    "type"      => Node::Type { v: Type::Type, pos },
+                    _ => Node::Word { v: word, pos }
+                }))
             }
         }
     }

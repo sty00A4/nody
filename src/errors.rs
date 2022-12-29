@@ -12,7 +12,7 @@ impl Position {
 #[derive(Debug, Clone)]
 pub enum Error {
     TargetFileNotFound(String),
-    ExpectedSymbol(char, char), ExpectedWord,
+    UnexpectedEnd, ExpectedSymbol(char, char), ExpectedWord,
     ParseFloat(String), ParseInt(String), ParseIntOverflow(String), ParseIntNegOverflow(String),
     ParseChar(String), ParseBool(String), ParseString(String),
     UnclosedChar, UnclosedString,
@@ -26,6 +26,7 @@ impl Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::TargetFileNotFound(path) => write!(f, "ERROR: {path:?} couldn't be found in the current directory"),
+            Self::UnexpectedEnd => write!(f, "ERROR: unexpected end of input"),
             Self::ExpectedSymbol(expected, got) => write!(f, "ERROR: expected {expected:?}, got {got:?}"),
             Self::ExpectedWord => write!(f, "ERROR: expected the beginning of a word here"),
             Self::ParseFloat(n) => write!(f, "ERROR: {n:?} couldn't be parsed as a float"),
