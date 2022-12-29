@@ -6,6 +6,7 @@ pub fn interpret(node: &Node, context: &mut Context) -> Result<(Option<Value>, R
     match node {
         Node::Int { v, pos:_ } => Ok((Some(Value::Int(*v)), Return::None)),
         Node::Float { v, pos:_ } => Ok((Some(Value::Float(*v)), Return::None)),
+        Node::Char { v, pos:_ } => Ok((Some(Value::Char(*v)), Return::None)),
         Node::Bool { v, pos:_ } => Ok((Some(Value::Bool(*v)), Return::None)),
         Node::String { v, pos:_ } => Ok((Some(Value::String(v.clone())), Return::None)),
         Node::Type { v, pos:_ } => Ok((Some(Value::Type(v.clone())), Return::None)),

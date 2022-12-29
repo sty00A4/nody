@@ -144,9 +144,9 @@ impl Debug for Value {
         write!(f, "{}", match self {
             Self::Int(v)           => v.to_string(),
             Self::Float(v)         => v.to_string(),
-            Self::Char(v)          => v.to_string(),
+            Self::Char(v)          => format!("'{v}"),
             Self::Bool(v)          => v.to_string(),
-            Self::String(v)        => v.to_string(),
+            Self::String(v)        => format!("{v:?}"),
             Self::Vector(v, _)     => format!("{v:?}"),
             Self::Function(v)      => v.to_string(),
             Self::NativFunction(v) => v.to_string(),

@@ -5,7 +5,7 @@ pub const SYMBOLS: [&str; 10] = ["(", ")", "[", "]", "{", "}", "@", "#", "$", "\
 pub type NodeRef = Box<Node>;
 #[derive(Clone, Debug)]
 pub enum Node {
-    Int { v: i64, pos: Position }, Float{ v: f64, pos: Position },
+    Int { v: i64, pos: Position }, Float{ v: f64, pos: Position }, Char { v: char, pos: Position },
     Bool { v: bool, pos: Position }, String { v: String, pos: Position },
     Type { v: Type, pos: Position },
     Word { v: String, pos: Position }, Key { v: String, pos: Position },
@@ -18,6 +18,7 @@ impl Node {
         match self {
             Node::Int { v:_, pos }              => pos,
             Node::Float { v:_, pos }            => pos,
+            Node::Char { v:_, pos }             => pos,
             Node::Bool { v:_, pos }             => pos,
             Node::String { v:_, pos }           => pos,
             Node::Type { v:_, pos }             => pos,
@@ -36,6 +37,7 @@ impl Display for Node {
         match self {
             Node::Int { v, pos:_ }            => write!(f, "{v:?}"),
             Node::Float { v, pos:_ }          => write!(f, "{v:?}"),
+            Node::Char { v, pos:_ }           => write!(f, "'{v}"),
             Node::Bool { v, pos:_ }           => write!(f, "{v:?}"),
             Node::String { v, pos:_ }         => write!(f, "{v:?}"),
             Node::Type { v, pos:_ }           => write!(f, "{v:?}"),
@@ -159,6 +161,22 @@ impl Scanner {
                     v: string.replace("\\n", "\n").replace("\\t", "\t").replace("\\r", "\r"),
                     pos: Position::new(start_ln..self.ln, start_col..self.col, &self.path)
                 })
+            }
+            "'" => {
+                let (start_ln, start_col) = (self.ln, self.col);
+                self.advance();
+                let mut c = self.get_char();
+                if c == '\\' {
+                    self.advance();
+                    match self.get_char() {
+                        'n' => c = '\n',
+                        'r' => c = '\r',
+                        't' => c = '\t',
+                        _ => c = self.get_char()
+                    }
+                }
+                self.advance();
+                Ok(Node::Char { v: c, pos: Position::new(start_ln..self.ln, start_col..self.col, &self.path) })
             }
             _ if self.get_char().is_ascii_digit() => {
                 let (start_ln, start_col) = (self.ln, self.col);
