@@ -8,11 +8,13 @@ pub struct Function {
     pub inline: bool
 }
 impl Function {
+    /// return the params as a type vector
     pub fn type_params(&self) -> Vec<Type> {
         let mut types: Vec<Type> = vec![];
         for (_, typ, more) in self.params.iter() { types.push(typ.clone()); }
         types
     }
+    /// box the return type
     pub fn return_type_boxed(&self) -> Option<Box<Type>> {
         if let Some(t) = &self.return_type { Some(Box::new(t.clone())) } else { None }
     }
@@ -22,8 +24,10 @@ impl Function {
             if pattern.get(pattern_idx) == None { return false }
             let (_, param_type, more) = &self.params[i];
             if *more {
-                while let Some(typ) = pattern.get(pattern_idx) {
-                    if typ != param_type { return false }
+                if let Some(typ) = pattern.get(pattern_idx) { pattern_idx += 1; } // one of the param_typ at least
+                else { return false }
+                while let Some(typ) = pattern.get(pattern_idx) { // skip through the rest
+                    if typ != param_type { break }
                     pattern_idx += 1;
                 }
             } else {

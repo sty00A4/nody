@@ -24,40 +24,30 @@ impl Scope {
     }
     pub fn create_fn(&mut self, id: String, func: Function, pos: Position) -> Result<(), Error> {
         match self.get_fn_mut(&id, &func.type_params()) {
-            None => if self.funcs.contains_key(&id) {
-                match self.funcs.get_mut(&id) {
-                    Some(funcs) => {
-                        funcs.push((func, pos));
-                        Ok(())
-                    }
-                    None => {
-                        self.funcs.insert(id, vec![(func, pos)]);
-                        Ok(())
-                    }
+            None => match self.funcs.get_mut(&id) {
+                Some(defs) => { // name already exists with different param pattern
+                    defs.push((func, pos));
+                    Ok(())
                 }
-            } else {
-                self.funcs.insert(id, vec![(func, pos)]);
-                Ok(())
+                None => { // name doesn't exist yet
+                    self.funcs.insert(id, vec![(func, pos)]);
+                    Ok(())
+                }
             }
             Some(_) => Err(Error::AlreadyDefined(id))
         }
     }
     pub fn create_native_fn(&mut self, id: String, func: NativFunction, pos: Position) -> Result<(), Error> {
         match self.get_native_fn_params_mut(&id, &func.params) {
-            None => if self.native_funcs.contains_key(&id) {
-                match self.native_funcs.get_mut(&id) {
-                    Some(defs) => {
-                        defs.push((func, pos));
-                        Ok(())
-                    }
-                    None => {
-                        self.native_funcs.insert(id, vec![(func, pos)]);
-                        Ok(())
-                    }
+            None => match self.native_funcs.get_mut(&id) {
+                Some(defs) => { // name already exists with different param pattern
+                    defs.push((func, pos));
+                    Ok(())
                 }
-            } else {
-                self.native_funcs.insert(id, vec![(func, pos)]);
-                Ok(())
+                None => { // name doesn't exist yet
+                    self.native_funcs.insert(id, vec![(func, pos)]);
+                    Ok(())
+                }
             }
             Some(_) => Err(Error::AlreadyDefined(id))
         }
@@ -67,17 +57,6 @@ impl Scope {
         self.vars.remove(id)
     }
 
-    pub fn change(&mut self, id: String, value: Value) -> Result<(), Error> {
-        match self.vars.get_mut(&id) {
-            Some((old_value, mutable, pos)) => if *mutable {
-                *old_value = value;
-                Ok(())
-            } else {
-                Err(Error::Immutable(id))
-            }
-            None => Err(Error::NotDefined(id))
-        }
-    }
     // get var
     pub fn get_var(&self, id: &String) -> Option<&Value> {
         match self.vars.get(id) {
@@ -108,9 +87,7 @@ impl Scope {
         match self.funcs.get(id) {
             Some(defs) => {
                 for (func, _) in defs.iter() {
-                    if func.pattern_match(pattern) {
-                        return Some(func)
-                    }
+                    if func.pattern_match(pattern) { return Some(func) }
                 }
                 None
             }
@@ -233,7 +210,7 @@ impl Context {
         }
     }
     pub fn after_call(&mut self, context: Context, inline: bool) {
-        if inline { self.scopes = context.scopes; }
+        if inline { self.scopes = context.scopes; } // copy scopes if inline
         self.global = context.global;
         self.trace = context.trace;
     }
@@ -304,18 +281,19 @@ impl Context {
         self.global.create_native_fn(id, func, pos)
     }
     pub fn create_params(&mut self, params: &Vec<(String, Type, bool)>, values: Vec<Value>, poses: Vec<Position>, inline: bool) -> Result<(), Error> {
-        let mut value_idx: usize = 0;
+        let mut value_idx: usize = 0; // in case of a param that accepts more values we need two iterator variables
         for i in 0..params.len() {
             let (param, param_type, more) = &params[i];
-            if *more {
-                let mut vec_values: Vec<Value> = vec![];
-                let mut pos = poses[value_idx].clone();
+            if *more { // more than one accepted
+                let mut vec_values: Vec<Value> = vec![]; // arg storage
+                let mut pos = poses[value_idx].clone(); // initiate position
                 while let Some(value) = values.get(value_idx) {
-                    if &value.typ() != param_type { break }
-                    pos = Position::between(pos, poses[value_idx].clone());
+                    if &value.typ() != param_type { break } // different type stopping the collection
+                    pos = Position::between(pos, poses[value_idx].clone()); // update position
                     vec_values.push(values[value_idx].clone());
-                    value_idx += 1;
+                    value_idx += 1; // update values_idx
                 }
+                // vec_values has to at least contain one value because of previous pattern matching!
                 self.create_var(param.clone(), Value::Vector(vec_values, Some(param_type.clone())), false, pos, inline)?;
             } else {
                 self.create_var(param.clone(), values[value_idx].clone(), false, poses[value_idx].clone(), inline)?;
@@ -330,7 +308,7 @@ impl Context {
     }
     
     pub fn change(&mut self, id: String, value: Value) -> Result<(), Error> {
-        match self.global.vars.get_mut(&id) {
+        match self.global.vars.get_mut(&id) { // first look in the global scope
             Some((old_value, mutable, pos)) => if *mutable {
                 *old_value = value;
                 return Ok(())
@@ -339,7 +317,7 @@ impl Context {
             }
             None => {}
         }
-        for scope in self.scopes.iter_mut().rev() {
+        for scope in self.scopes.iter_mut().rev() { // than look in the scope stack in reverse
             match scope.vars.get_mut(&id) {
                 Some((old_value, mutable, pos)) => if *mutable {
                     *old_value = value;

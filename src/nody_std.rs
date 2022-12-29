@@ -7,10 +7,19 @@ fn _let(context: &mut Context) -> Result<Option<Value>, Error> {
     let v = context.get_var(&"v".to_string()).unwrap().clone();
     if let Value::Key(id) = id {
         let len = context.scopes.len();
-        match context.scopes.get_mut(len - 2) {
+        match context.scopes.get_mut(len - 2) { // try to mutate the scope before the last
             Some(scope) => scope.create_var(id, v, false, pos, false)?,
             None => context.create_var(id, v, false, pos, false)?
         }
+        Ok(None)
+    } else { panic!("type checking doesn't work") }
+}
+fn _let_global(context: &mut Context) -> Result<Option<Value>, Error> {
+    let id = context.get_var(&"id".to_string()).unwrap().clone();
+    let pos = context.get_var_pos(&"id".to_string()).unwrap().clone();
+    let v = context.get_var(&"v".to_string()).unwrap().clone();
+    if let Value::Key(id) = id {
+        context.global.create_var(id, v, false, pos, false)?;
         Ok(None)
     } else { panic!("type checking doesn't work") }
 }
@@ -20,10 +29,19 @@ fn _mut(context: &mut Context) -> Result<Option<Value>, Error> {
     let v = context.get_var(&"v".to_string()).unwrap().clone();
     if let Value::Key(id) = id {
         let len = context.scopes.len();
-        match context.scopes.get_mut(len - 2) {
+        match context.scopes.get_mut(len - 2) { // try to mutate the scope before the last
             Some(scope) => scope.create_var(id, v, true, pos, false)?,
             None => context.create_var(id, v, true, pos, false)?
         }
+        Ok(None)
+    } else { panic!("type checking doesn't work") }
+}
+fn _mut_global(context: &mut Context) -> Result<Option<Value>, Error> {
+    let id = context.get_var(&"id".to_string()).unwrap().clone();
+    let pos = context.get_var_pos(&"id".to_string()).unwrap().clone();
+    let v = context.get_var(&"v".to_string()).unwrap().clone();
+    if let Value::Key(id) = id {
+        context.global.create_var(id, v, true, pos, false)?;
         Ok(None)
     } else { panic!("type checking doesn't work") }
 }
@@ -31,11 +49,10 @@ fn _set(context: &mut Context) -> Result<Option<Value>, Error> {
     let id = context.get_var(&"id".to_string()).unwrap().clone();
     let v = context.get_var(&"v".to_string()).unwrap().clone();
     if let Value::Key(id) = id {
+        if context.get_var(&id).is_none() { return Err(Error::NotDefined(id)) }
         if !context.is_mutable(&id).unwrap() { return Err(Error::Immutable(id)) }
-        match context.get_var_mut(&id) {
-            Some(value) => { *value = v; Ok(None) }
-            None => Err(Error::NotDefined(id))
-        }
+        context.change(id, v);
+        Ok(None)
     } else { panic!("type checking doesn't work") }
 }
 // +
@@ -367,10 +384,22 @@ pub fn std_context() -> Result<Context, Error> {
         body: _let,
         inline: true
     }, pos.clone())?;
+    context.create_native_fn(String::from("let-global"), NativFunction {
+        params: vec![("id".to_string(), Type::Key, false), ("v".to_string(), Type::Any, false)],
+        return_type: None,
+        body: _let_global,
+        inline: true
+    }, pos.clone())?;
     context.create_native_fn(String::from("mut"), NativFunction {
         params: vec![("id".to_string(), Type::Key, false), ("v".to_string(), Type::Any, false)],
         return_type: None,
         body: _mut,
+        inline: true
+    }, pos.clone())?;
+    context.create_native_fn(String::from("mut-global"), NativFunction {
+        params: vec![("id".to_string(), Type::Key, false), ("v".to_string(), Type::Any, false)],
+        return_type: None,
+        body: _mut_global,
         inline: true
     }, pos.clone())?;
     context.create_native_fn(String::from("set"), NativFunction {
