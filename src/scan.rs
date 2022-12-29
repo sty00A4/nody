@@ -1,7 +1,7 @@
 use crate::*;
 
 pub const WS: [&str; 4] = [" ", "\r", "\t", "\n"];
-pub const SYMBOLS: [&str; 10] = ["(", ")", "[", "]", "{", "}", "@", "#", "$", "\""];
+pub const SYMBOLS: [&str; 11] = ["(", ")", "[", "]", "{", "}", "@", "#", "$", "\"", "'"];
 pub type NodeRef = Box<Node>;
 #[derive(Clone, Debug)]
 pub enum Node {
