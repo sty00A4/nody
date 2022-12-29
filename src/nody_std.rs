@@ -288,6 +288,10 @@ fn _char_str(context: &mut Context) -> Result<Option<Value>, Error> {
 fn _str(context: &mut Context) -> Result<Option<Value>, Error> {
     Ok(Some(Value::String(context.get_var(&"v".to_string()).unwrap().to_string())))
 }
+// key
+fn _key(context: &mut Context) -> Result<Option<Value>, Error> {
+    Ok(Some(Value::Key(context.get_var(&"v".to_string()).unwrap().to_string())))
+}
 // vec
 fn _vec(context: &mut Context) -> Result<Option<Value>, Error> {
     let t = context.get_var(&"t".to_string()).unwrap();
@@ -467,6 +471,12 @@ pub fn std_context() -> Result<Context, Error> {
         params: vec![("v".to_string(), Type::Any, false)],
         return_type: Some(Type::String),
         body: _str
+    }, pos.clone())?;
+    // key
+    context.create_native_fn(String::from("key"), NativFunction {
+        params: vec![("v".to_string(), Type::Any, false)],
+        return_type: Some(Type::Key),
+        body: _key
     }, pos.clone())?;
     // vec
     context.create_native_fn(String::from("vec"), NativFunction {

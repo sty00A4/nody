@@ -118,8 +118,8 @@ impl PartialEq for NativFunction {
 }
 #[derive(Clone, PartialEq)]
 pub enum Value {
-    Int(i64), Float(f64),
-    Char(char), Bool(bool), String(String), Vector(Vec<Value>, Option<Type>),
+    Int(i64), Float(f64), Char(char), Bool(bool),
+    String(String), Key(String), Vector(Vec<Value>, Option<Type>),
     Function(Function), NativFunction(NativFunction), Object(Scope),
     Type(Type)
 }
@@ -131,6 +131,7 @@ impl Value {
             Self::Char(_)          => Type::Char,
             Self::Bool(_)          => Type::Bool,
             Self::String(_)        => Type::String,
+            Self::Key(_)           => Type::Key,
             Self::Vector(_, t)     => if let Some(t) = t { Type::Vector(Some(Box::new(t.clone()))) } else { Type::Vector(None) }
             Self::Function(f)      => Type::Function(f.type_params(), f.return_type_boxed()),
             Self::NativFunction(f) => Type::NativFunction(f.type_params(), f.return_type_boxed()),
@@ -147,6 +148,7 @@ impl Debug for Value {
             Self::Char(v)          => format!("'{v}'"),
             Self::Bool(v)          => v.to_string(),
             Self::String(v)        => format!("{v:?}"),
+            Self::Key(v)           => format!("@{v}"),
             Self::Vector(v, _)     => format!("{v:?}"),
             Self::Function(v)      => v.to_string(),
             Self::NativFunction(v) => v.to_string(),
@@ -163,6 +165,7 @@ impl Display for Value {
             Self::Char(v)          => v.to_string(),
             Self::Bool(v)          => v.to_string(),
             Self::String(v)        => v.to_string(),
+            Self::Key(v)           => format!("@{v}"),
             Self::Vector(v, _)     => format!("{v:?}"),
             Self::Function(v)      => v.to_string(),
             Self::NativFunction(v) => v.to_string(),
@@ -174,8 +177,8 @@ impl Display for Value {
 #[derive(Clone)]
 pub enum Type {
     Any,
-    Int, Float,
-    Char, Bool, String, Vector(Option<Box<Type>>),
+    Int, Float, Char, Bool,
+    String, Key, Vector(Option<Box<Type>>),
     Function(Vec<Type>, Option<Box<Type>>), NativFunction(Vec<Type>, Option<Box<Type>>), Object,
     Type
 }
@@ -188,6 +191,7 @@ impl Debug for Type {
             Self::Char                => "char".to_string(),
             Self::Bool                => "bool".to_string(),
             Self::String              => "str".to_string(),
+            Self::Key                 => "key".to_string(),
             Self::Vector(t)           => if let Some(t) = t { format!("vec<{t:?}>") } else { format!("vec") }
             Self::Function(p, r)      => format!("fn({p:?})"),
             Self::NativFunction(p, r) => format!("nativ-fn({p:?})"),
@@ -205,6 +209,7 @@ impl Display for Type {
             Self::Char                => "char".to_string(),
             Self::Bool                => "bool".to_string(),
             Self::String              => "str".to_string(),
+            Self::Key                 => "key".to_string(),
             Self::Vector(t)           => if let Some(t) = t { format!("vec<{t}>") } else { format!("vec") }
             Self::Function(t, _)      => format!("fn({})", t.iter().map(|x| x.to_string()).collect::<Vec<String>>().join(" ")),
             Self::NativFunction(t, _) => format!("nativ-fn({})", t.iter().map(|x| x.to_string()).collect::<Vec<String>>().join(" ")),
@@ -217,16 +222,17 @@ impl PartialEq for Type {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
             (Self::Any, _) => true, (_, Self::Any) => true,
-            (Self::Int, Self::Int) => true,
-            (Self::Float, Self::Float) => true,
-            (Self::Char, Self::Char) => true,
-            (Self::Bool, Self::Bool) => true,
-            (Self::String, Self::String) => true,
+            (Self::Int, Self::Int)          => true,
+            (Self::Float, Self::Float)      => true,
+            (Self::Char, Self::Char)        => true,
+            (Self::Bool, Self::Bool)        => true,
+            (Self::String, Self::String)    => true,
+            (Self::Key, Self::Key)          => true,
             (Self::Vector(t1), Self::Vector(t2)) => t1 == t2,
             (Self::Function(p1, t1), Self::Function(p2, t2)) => p1 == p2 && t1 == t2,
             (Self::NativFunction(p1, t1), Self::NativFunction(p2, t2)) => p1 == p2 && t1 == t2,
-            (Self::Object, Self::Object) => true,
-            (Self::Type, Self::Type) => true,
+            (Self::Object, Self::Object)    => true,
+            (Self::Type, Self::Type)        => true,
             _ => false
         }
     }

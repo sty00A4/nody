@@ -32,6 +32,7 @@ pub fn interpret(node: &Node, context: &mut Context) -> Result<(Option<Value>, R
             Some(v) => Ok((Some(v.clone()), Return::None)),
             None => Err(Error::NotDefined(v.clone()))
         }
+        Node::Key { v, pos:_ } => Ok((Some(Value::Key(v.clone())), Return::None)),
         Node::Body { nodes, pos:_ } => {
             context.push();
             for node in nodes.iter() {
