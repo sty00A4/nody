@@ -55,6 +55,45 @@ fn _set(context: &mut Context) -> Result<Option<Value>, Error> {
         Ok(None)
     } else { panic!("type checking doesn't work") }
 }
+// control flow
+fn _if(context: &mut Context) -> Result<Option<Value>, Error> {
+    let cond = context.get_var(&"cond".to_string()).unwrap();
+    let case = context.get_var(&"case".to_string()).unwrap();
+    let else_ = context.get_var(&"else".to_string()).unwrap();
+    if cond == &Value::Bool(true) {
+        Ok(Some(case.clone()))
+    } else {
+        Ok(Some(else_.clone()))
+    }
+}
+fn _if_closure(context: &mut Context) -> Result<Option<Value>, Error> {
+    let cond = context.get_var(&"cond".to_string()).unwrap();
+    let case = context.get_var(&"case".to_string()).unwrap().clone();
+    if cond == &Value::Bool(true) {
+        if let Value::Closure(node) = case {
+            let (value, _) = interpret(&node, context)?;
+            Ok(value)
+        } else { panic!("type checking doesn't work") }
+    } else {
+        Ok(None)
+    }
+}
+fn _if_else_closure(context: &mut Context) -> Result<Option<Value>, Error> {
+    let cond = context.get_var(&"cond".to_string()).unwrap();
+    let case = context.get_var(&"case".to_string()).unwrap().clone();
+    let else_ = context.get_var(&"else".to_string()).unwrap().clone();
+    if cond == &Value::Bool(true) {
+        if let Value::Closure(node) = case {
+            let (value, _) = interpret(&node, context)?;
+            Ok(value)
+        } else { panic!("type checking doesn't work") }
+    } else {
+        if let Value::Closure(node) = else_ {
+            let (value, _) = interpret(&node, context)?;
+            Ok(value)
+        } else { panic!("type checking doesn't work") }
+    }
+}
 // +
 fn _add_int(context: &mut Context) -> Result<Option<Value>, Error> {
     let n = context.get_var(&"n".to_string()).unwrap();
@@ -407,6 +446,36 @@ pub fn std_context() -> Result<Context, Error> {
         return_type: None,
         body: _set,
         inline: true
+    }, pos.clone())?;
+    // control flow
+    context.create_native_fn(String::from("?"), NativFunction {
+        params: vec![
+            ("cond".to_string(), Type::Bool, false),
+            ("case".to_string(), Type::Any, false),
+            ("else".to_string(), Type::Any, false)
+        ],
+        return_type: Some(Type::Any),
+        body: _if,
+        inline: false
+    }, pos.clone())?;
+    context.create_native_fn(String::from("if"), NativFunction {
+        params: vec![
+            ("cond".to_string(), Type::Bool, false),
+            ("case".to_string(), Type::Closure, false),
+        ],
+        return_type: Some(Type::Any),
+        body: _if_closure,
+        inline: false
+    }, pos.clone())?;
+    context.create_native_fn(String::from("if"), NativFunction {
+        params: vec![
+            ("cond".to_string(), Type::Bool, false),
+            ("case".to_string(), Type::Closure, false),
+            ("else".to_string(), Type::Closure, false)
+        ],
+        return_type: Some(Type::Any),
+        body: _if_else_closure,
+        inline: false
     }, pos.clone())?;
     // +
     context.create_native_fn(String::from("+"), NativFunction {
