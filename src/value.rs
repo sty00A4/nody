@@ -282,13 +282,10 @@ impl PartialEq for Type {
                     }
                     _ => match t2 {
                         Some(t2) => t1 == t2,
-                        None => false
+                        None => true
                     }
                 }
-                None => match t2 {
-                    None => true,
-                    _ => false
-                }
+                None => true
             }
             (Self::Key, Self::Key)          => true,
             (Self::Closure, Self::Closure)  => true,
