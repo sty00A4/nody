@@ -224,6 +224,9 @@ fn _return(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
     let v = context.get_var(&"v".to_string()).unwrap().clone();
     Ok((Some(v), Return::Return))
 }
+fn _break(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
+    Ok((None, Return::Break))
+}
 fn _do(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
     let node = context.get_var(&":node".to_string()).unwrap().clone();
     if let Value::Closure(node) = node {
@@ -258,6 +261,31 @@ fn _for(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
                 Ok((None, Return::None))
             } else { panic!("type checking doesn't work") }
         } else { panic!("type checking doesn't work") }
+    } else { panic!("type checking doesn't work") }
+}
+fn _while(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
+    let cond = context.get_var(&":cond".to_string()).unwrap().clone();
+    let body = context.get_var(&":body".to_string()).unwrap().clone();
+    if let Value::Closure(body) = body {
+        if let Value::Closure(cond) = cond {
+            while let (Some(Value::Bool(true)), _) = interpret(&cond, context)? {
+                let (value, ret) = interpret(&body, context)?;
+                if ret == Return::Break { break }
+                if ret == Return::Return { return Ok((value, ret)) }
+            }
+            Ok((None, Return::None))
+        } else { panic!("type checking doesn't work") }
+    } else { panic!("type checking doesn't work") }
+}
+fn _loop(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
+    let body = context.get_var(&":body".to_string()).unwrap().clone();
+    if let Value::Closure(body) = body {
+        loop {
+            let (value, ret) = interpret(&body, context)?;
+            if ret == Return::Break { break }
+            if ret == Return::Return { return Ok((value, ret)) }
+        }
+        Ok((None, Return::None))
     } else { panic!("type checking doesn't work") }
 }
 // +
@@ -693,6 +721,12 @@ pub fn std_context() -> Result<Context, Error> {
         body: _return,
         inline: false
     }, pos.clone())?;
+    context.create_native_fn(String::from("break"), NativFunction {
+        params: vec![],
+        return_type: None,
+        body: _break,
+        inline: false
+    }, pos.clone())?;
     context.create_native_fn(String::from("do"), NativFunction {
         params: vec![(":node".to_string(), Type::Closure, false)],
         return_type: Some(Type::Any),
@@ -715,8 +749,23 @@ pub fn std_context() -> Result<Context, Error> {
             (":iter".to_string(), Type::Vector(Some(Box::new(Type::Any))), false),
             (":body".to_string(), Type::Closure, false)
         ],
-        return_type: Some(Type::Any),
+        return_type: None,
         body: _for,
+        inline: true
+    }, pos.clone())?;
+    context.create_native_fn(String::from("while"), NativFunction {
+        params: vec![
+            (":cond".to_string(), Type::Closure, false),
+            (":body".to_string(), Type::Closure, false)
+        ],
+        return_type: None,
+        body: _while,
+        inline: true
+    }, pos.clone())?;
+    context.create_native_fn(String::from("loop"), NativFunction {
+        params: vec![(":body".to_string(), Type::Closure, false)],
+        return_type: None,
+        body: _loop,
         inline: true
     }, pos.clone())?;
     // +

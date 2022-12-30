@@ -133,13 +133,15 @@ impl Scanner {
                 let mut nodes: Vec<Node> = vec![];
                 while self.get() != '}' && self.get() != '\0' {
                     let node = self.node()?; self.advance_ws();
-                    if node.is_none() { return Err(Error::UnexpectedEnd) }
-                    let node = node.unwrap();
-                    nodes.push(node);
+                    if let Some(node) = node { nodes.push(node); }
                 }
                 if self.get() == '\0' { return Err(Error::UnexpectedEnd) }
                 self.advance();
-                Ok(Some(Node::Body { nodes, pos: Position::new(start_ln..self.ln, start_col..self.col, &self.path) }))
+                if nodes.len() == 1 {
+                    Ok(Some(nodes[0].clone()))
+                } else {
+                    Ok(Some(Node::Body { nodes, pos: Position::new(start_ln..self.ln, start_col..self.col, &self.path) }))
+                }
             }
             '[' => {
                 let (start_ln, start_col) = (self.ln, self.col);
