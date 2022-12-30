@@ -97,6 +97,7 @@ impl Scanner {
         if self.get() == '\0' { return Ok(None) }
         self.advance_ws();
         match self.get() {
+            ')' | ']' | '}' => Err(Error::UnexpectedSymbol(self.get())),
             ';' => {
                 while self.get() == ';' && self.get() != '\0' {
                     while self.get() != '\n' && self.get() != '\0' { self.advance(); }

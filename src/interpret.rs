@@ -168,7 +168,67 @@ pub fn interpret(node: &Node, context: &mut Context) -> Result<(Option<Value>, R
                             }
                         }
                     } else {
-                        todo!()
+                        context.trace_push(&poses[0]);
+                        Err(Error::ValuePatternNotFound(Type::Vector(Some(Box::new(Type::Any))), types))
+                    }
+                    Value::String(string) => if values.len() == 1 {
+                        context.pop();
+                        if let Value::Int(idx) = &values[0] {
+                            if *idx < 0 {
+                                let i = string.len() - idx.abs() as usize;
+                                match string.get(i .. i + 1) {
+                                    Some(c) => Ok((Some(Value::Char(c.chars().collect::<Vec<char>>()[0])), Return::None)),
+                                    None => {
+                                        context.trace_push(&poses[0]);
+                                        Err(Error::IndexOutOfRange(string.len() - idx.abs() as usize, string.len()))
+                                    }
+                                }
+                            } else {
+                                let i = *idx as usize;
+                                match string.get(i .. i + 1) {
+                                    Some(c) => Ok((Some(Value::Char(c.chars().collect::<Vec<char>>()[0])), Return::None)),
+                                    None => {
+                                        context.trace_push(&poses[0]);
+                                        Err(Error::IndexOutOfRange(*idx as usize, string.len()))
+                                    }
+                                }
+                            }
+                        } else {
+                            context.trace_push(&poses[0]);
+                            Err(Error::ExpectedTypes(vec![Type::Int], types[0].clone()))
+                        }
+                    } else if values.len() == 2 {
+                        context.pop();
+                        if let Value::Int(idx1) = &values[0] {
+                            if let Value::Int(idx2) = &values[1] {
+                                if *idx1 < 0 {
+                                    context.trace_push(&poses[0]);
+                                    return Err(Error::IllegalNegativeIndex(*idx1))
+                                }
+                                if *idx2 < 0 {
+                                    context.trace_push(&poses[1]);
+                                    return Err(Error::IllegalNegativeIndex(*idx2))
+                                }
+                                if *idx1 as usize >= string.len() {
+                                    context.trace_push(&poses[0]);
+                                    return Err(Error::IndexOutOfRange(*idx1 as usize, string.len()))
+                                }
+                                if *idx2 as usize >= string.len() {
+                                    context.trace_push(&poses[0]);
+                                    return Err(Error::IndexOutOfRange(*idx2 as usize, string.len()))
+                                }
+                                Ok((Some(Value::String(string.get(*idx1 as usize .. *idx2 as usize).unwrap().to_string())), Return::None))
+                            } else {
+                                context.trace_push(&poses[0]);
+                                Err(Error::ExpectedTypes(vec![Type::Int], types[0].clone()))
+                            }
+                        } else {
+                            context.trace_push(&poses[0]);
+                            Err(Error::ExpectedTypes(vec![Type::Int], types[0].clone()))
+                        }
+                    } else {
+                        context.trace_push(&poses[0]);
+                        Err(Error::ValuePatternNotFound(Type::Vector(Some(Box::new(Type::Any))), types))
                     }
                     _ => {
                         context.trace_push(head.pos());

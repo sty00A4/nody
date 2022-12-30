@@ -464,6 +464,107 @@ fn _mod_float(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
         Ok((Some(Value::Float(sum)), Return::None))
     } else { panic!("type checking doesn't work") }
 }
+// =
+fn _eq(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
+    let a = context.get_var(&"a".to_string()).unwrap();
+    let b = context.get_var(&"b".to_string()).unwrap();
+    Ok((Some(Value::Bool(a == b)), Return::None))
+}
+// !=
+fn _neq(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
+    let a = context.get_var(&"a".to_string()).unwrap();
+    let b = context.get_var(&"b".to_string()).unwrap();
+    Ok((Some(Value::Bool(a == b)), Return::None))
+}
+// >
+fn _gt_int(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
+    let a = context.get_var(&"a".to_string()).unwrap();
+    let b = context.get_var(&"b".to_string()).unwrap();
+    if let Value::Int(a) = a {
+        if let Value::Int(b) = b {
+            Ok((Some(Value::Bool(a > b)), Return::None))
+        } else { panic!("type checking doesn't work") }
+    } else { panic!("type checking doesn't work") }
+}
+fn _gt_float(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
+    let a = context.get_var(&"a".to_string()).unwrap();
+    let b = context.get_var(&"b".to_string()).unwrap();
+    if let Value::Float(a) = a {
+        if let Value::Float(b) = b {
+            Ok((Some(Value::Bool(a > b)), Return::None))
+        } else { panic!("type checking doesn't work") }
+    } else { panic!("type checking doesn't work") }
+}
+// >=
+fn _ge_int(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
+    let a = context.get_var(&"a".to_string()).unwrap();
+    let b = context.get_var(&"b".to_string()).unwrap();
+    if let Value::Int(a) = a {
+        if let Value::Int(b) = b {
+            Ok((Some(Value::Bool(a >= b)), Return::None))
+        } else { panic!("type checking doesn't work") }
+    } else { panic!("type checking doesn't work") }
+}
+fn _ge_float(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
+    let a = context.get_var(&"a".to_string()).unwrap();
+    let b = context.get_var(&"b".to_string()).unwrap();
+    if let Value::Float(a) = a {
+        if let Value::Float(b) = b {
+            Ok((Some(Value::Bool(a >= b)), Return::None))
+        } else { panic!("type checking doesn't work") }
+    } else { panic!("type checking doesn't work") }
+}
+// <
+fn _lt_int(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
+    let a = context.get_var(&"a".to_string()).unwrap();
+    let b = context.get_var(&"b".to_string()).unwrap();
+    if let Value::Int(a) = a {
+        if let Value::Int(b) = b {
+            Ok((Some(Value::Bool(a < b)), Return::None))
+        } else { panic!("type checking doesn't work") }
+    } else { panic!("type checking doesn't work") }
+}
+fn _lt_float(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
+    let a = context.get_var(&"a".to_string()).unwrap();
+    let b = context.get_var(&"b".to_string()).unwrap();
+    if let Value::Float(a) = a {
+        if let Value::Float(b) = b {
+            Ok((Some(Value::Bool(a < b)), Return::None))
+        } else { panic!("type checking doesn't work") }
+    } else { panic!("type checking doesn't work") }
+}
+// <=
+fn _le_int(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
+    let a = context.get_var(&"a".to_string()).unwrap();
+    let b = context.get_var(&"b".to_string()).unwrap();
+    if let Value::Int(a) = a {
+        if let Value::Int(b) = b {
+            Ok((Some(Value::Bool(a <= b)), Return::None))
+        } else { panic!("type checkng doesn't work") }
+    } else { panic!("type checking doesn't work") }
+}
+fn _le_float(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
+    let a = context.get_var(&"a".to_string()).unwrap();
+    let b = context.get_var(&"b".to_string()).unwrap();
+    if let Value::Float(a) = a {
+        if let Value::Float(b) = b {
+            Ok((Some(Value::Bool(a <= b)), Return::None))
+        } else { panic!("type checking doesn't work") }
+    } else { panic!("type checking doesn't work") }
+}
+// len
+fn _len_vec(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
+    let v = context.get_var(&"v".to_string()).unwrap();
+    if let Value::Vector(v, t) = v {
+        Ok((Some(Value::Int(v.len() as i64)), Return::None))
+    } else { panic!("type checking doesn't work") }
+}
+fn _len_str(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
+    let v = context.get_var(&"v".to_string()).unwrap();
+    if let Value::String(v) = v {
+        Ok((Some(Value::Int(v.len() as i64)), Return::None))
+    } else { panic!("type checking doesn't work") }
+}
 // int
 fn _int_int(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
     Ok((Some(context.get_var(&"v".to_string()).unwrap().clone()), Return::None))
@@ -851,6 +952,85 @@ pub fn std_context() -> Result<Context, Error> {
         params: vec![("n".to_string(), Type::Float, false), ("nums".to_string(), Type::Float, true)],
         return_type: Some(Type::Float),
         body: _mod_float,
+        inline: false
+    }, pos.clone())?;
+    // =
+    context.create_native_fn(String::from("="), NativFunction {
+        params: vec![("a".to_string(), Type::Any, false), ("b".to_string(), Type::Any, false)],
+        return_type: Some(Type::Bool),
+        body: _eq,
+        inline: false
+    }, pos.clone())?;
+    // !=
+    context.create_native_fn(String::from("!="), NativFunction {
+        params: vec![("a".to_string(), Type::Any, false), ("b".to_string(), Type::Any, false)],
+        return_type: Some(Type::Bool),
+        body: _neq,
+        inline: false
+    }, pos.clone())?;
+    // >
+    context.create_native_fn(String::from(">"), NativFunction {
+        params: vec![("a".to_string(), Type::Int, false), ("b".to_string(), Type::Int, false)],
+        return_type: Some(Type::Bool),
+        body: _gt_int,
+        inline: false
+    }, pos.clone())?;
+    context.create_native_fn(String::from(">"), NativFunction {
+        params: vec![("a".to_string(), Type::Float, false), ("b".to_string(), Type::Float, false)],
+        return_type: Some(Type::Bool),
+        body: _gt_float,
+        inline: false
+    }, pos.clone())?;
+    // >=
+    context.create_native_fn(String::from(">="), NativFunction {
+        params: vec![("a".to_string(), Type::Int, false), ("b".to_string(), Type::Int, false)],
+        return_type: Some(Type::Bool),
+        body: _ge_int,
+        inline: false
+    }, pos.clone())?;
+    context.create_native_fn(String::from(">="), NativFunction {
+        params: vec![("a".to_string(), Type::Float, false), ("b".to_string(), Type::Float, false)],
+        return_type: Some(Type::Bool),
+        body: _ge_float,
+        inline: false
+    }, pos.clone())?;
+    // <
+    context.create_native_fn(String::from("<"), NativFunction {
+        params: vec![("a".to_string(), Type::Int, false), ("b".to_string(), Type::Int, false)],
+        return_type: Some(Type::Bool),
+        body: _lt_int,
+        inline: false
+    }, pos.clone())?;
+    context.create_native_fn(String::from("<"), NativFunction {
+        params: vec![("a".to_string(), Type::Float, false), ("b".to_string(), Type::Float, false)],
+        return_type: Some(Type::Bool),
+        body: _lt_float,
+        inline: false
+    }, pos.clone())?;
+    // <=
+    context.create_native_fn(String::from("<="), NativFunction {
+        params: vec![("a".to_string(), Type::Int, false), ("b".to_string(), Type::Int, false)],
+        return_type: Some(Type::Bool),
+        body: _le_int,
+        inline: false
+    }, pos.clone())?;
+    context.create_native_fn(String::from("<="), NativFunction {
+        params: vec![("a".to_string(), Type::Float, false), ("b".to_string(), Type::Float, false)],
+        return_type: Some(Type::Bool),
+        body: _le_float,
+        inline: false
+    }, pos.clone())?;
+    // len
+    context.create_native_fn(String::from("len"), NativFunction {
+        params: vec![("v".to_string(), Type::Vector(Some(Box::new(Type::Any))), false)],
+        return_type: Some(Type::Int),
+        body: _len_vec,
+        inline: false
+    }, pos.clone())?;
+    context.create_native_fn(String::from("len"), NativFunction {
+        params: vec![("v".to_string(), Type::String, false)],
+        return_type: Some(Type::Int),
+        body: _len_str,
         inline: false
     }, pos.clone())?;
     // int

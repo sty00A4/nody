@@ -31,3 +31,32 @@
 		#(set @res (+ res n)))
 	(return res)
 })
+; stings
+(def-global @concat $(strs str *) #{
+	(mut @res "")
+	(for @s strs
+		#(set @res (+ res s)))
+	(return res)
+})
+(def-global @concat $(strs (vec str)) #{
+	(mut @res "")
+	(for @s strs
+		#(set @res (+ res s)))
+	(return res)
+})
+(def-global @join $(sep str strs (vec str)) #{
+	(mut @res "")
+	(for @s strs
+		#(set @res (+ res s sep)))
+	(if (> (len strs) 0)
+		#(set @res (res 0 (- (len res) (len sep)))))
+	(return res)
+})
+(def-global @join $(sep str strs str *) #{
+	(mut @res "")
+	(for @s strs
+		#(set @res (+ res s sep)))
+	(if (> (len strs) 0)
+		#(set @res (res 0 (- (len res) (len sep)))))
+	(return res)
+})

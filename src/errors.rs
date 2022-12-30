@@ -12,21 +12,22 @@ impl Position {
 #[derive(Debug, Clone)]
 pub enum Error {
     TargetFileNotFound(String),
-    UnexpectedEnd, ExpectedSymbol(char, char), ExpectedWord,
+    UnexpectedEnd, UnexpectedSymbol(char), ExpectedSymbol(char, char), ExpectedWord,
     ParseFloat(String), ParseInt(String), ParseIntOverflow(String), ParseIntNegOverflow(String),
     ParseChar(String), ParseBool(String), ParseString(String),
     UnclosedChar, UnclosedString,
     NotDefined(String), AlreadyDefined(String), Immutable(String),
     Expected, ExpectedArg, ExpectedType(Type, Type), ExpectedTypes(Vec<Type>, Type),
-    FunctionPatternNotFound(String, Vec<Type>),
+    FunctionPatternNotFound(String, Vec<Type>), ValuePatternNotFound(Type, Vec<Type>),
     InvalidHeadValue(Value), InvalidHeadCastType(Type), InvalidCastBetween(Type, Type),
-    IndexOutOfRange(usize, usize)
+    IndexOutOfRange(usize, usize), IllegalNegativeIndex(i64)
 }
 impl Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::TargetFileNotFound(path) => write!(f, "ERROR: {path:?} couldn't be found in the current directory"),
             Self::UnexpectedEnd => write!(f, "ERROR: unexpected end of input"),
+            Self::UnexpectedSymbol(s) => write!(f, "ERROR: unexpected {s:?}"),
             Self::ExpectedSymbol(expected, got) => write!(f, "ERROR: expected {expected:?}, got {got:?}"),
             Self::ExpectedWord => write!(f, "ERROR: expected the beginning of a word here"),
             Self::ParseFloat(n) => write!(f, "ERROR: {n:?} couldn't be parsed as a float"),
@@ -48,10 +49,13 @@ impl Display for Error {
             t.iter().map(|x| x.to_string()).collect::<Vec<String>>().join("|")),
             Self::FunctionPatternNotFound(id, types) => write!(f, "ERROR: no function {id:?} found with pattern ({})",
             types.iter().map(|x| x.to_string()).collect::<Vec<String>>().join(", ")),
+            Self::ValuePatternNotFound(typ, types) => write!(f, "ERROR: no value function of type {typ} found with pattern ({})",
+            types.iter().map(|x| x.to_string()).collect::<Vec<String>>().join(", ")),
             Self::InvalidHeadValue(v) => write!(f, "ERROR: unexpected {} value for head", v.typ()),
             Self::InvalidHeadCastType(t) => write!(f, "ERROR: invalid cast type {t}"),
             Self::InvalidCastBetween(t1, t2) => write!(f, "ERROR: invalid cast from {t2} to {t1}"),
             Self::IndexOutOfRange(idx, size) => write!(f, "ERROR: index {idx} out of range of size {size}"),
+            Self::IllegalNegativeIndex(idx) => write!(f, "ERROR: illegal negative index {idx}"),
         }
     }
 }
