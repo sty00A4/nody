@@ -725,6 +725,13 @@ fn _vec(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
         Ok((Some(Value::Type(Type::Vector(Some(Box::new(t.clone()))))), Return::None))
     } else { panic!("type checking doesn't work") }
 }
+fn _contains(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
+    let values = context.get_var(&"values".to_string()).unwrap();
+    let value = context.get_var(&"value".to_string()).unwrap();
+    if let Value::Vector(values, _) = values {
+        Ok((Some(Value::Bool(values.contains(value))), Return::None))
+    } else { panic!("type checking doesn't work") }
+}
 // type
 fn _type(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
     Ok((Some(Value::Type(context.get_var(&"v".to_string()).unwrap().typ())), Return::None))
@@ -1225,6 +1232,15 @@ pub fn std_context() -> Result<Context, Error> {
         params: vec![("t".to_string(), Type::Type, false)],
         return_type: Some(Type::Vector(Some(Box::new(Type::Any)))),
         body: _vec,
+        inline: false
+    }, pos.clone())?;
+    context.create_native_fn(String::from("contains"), NativFunction {
+        params: vec![
+            ("values".to_string(), Type::Vector(Some(Box::new(Type::Any))), false),
+            ("value".to_string(), Type::Any, false)
+        ],
+        return_type: Some(Type::Bool),
+        body: _contains,
         inline: false
     }, pos.clone())?;
     // type
