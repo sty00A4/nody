@@ -72,7 +72,7 @@ pub fn interpret(node: &Node, context: &mut Context) -> Result<(Option<Value>, R
         }
         Node::Node { head, args, pos } => {
             context.push();
-            // get arguements
+            // get arguments
             let mut values: Vec<Value> = vec![];
             let mut types: Vec<Type> = vec![];
             let mut poses: Vec<Position> = vec![];
