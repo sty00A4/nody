@@ -271,7 +271,28 @@ impl PartialEq for Type {
             (Self::Char, Self::Char)        => true,
             (Self::Bool, Self::Bool)        => true,
             (Self::String, Self::String)    => true,
-            (Self::Vector(t1), Self::Vector(t2)) => t1 == t2,
+            (Self::Vector(t1), Self::Vector(t2)) => match t1 {
+                Some(t1) => match t1.as_ref() {
+                    Type::Any => match t2 {
+                        Some(t2) => match t2.as_ref() {
+                            Type::Any => true,
+                            _ => false
+                        }
+                        None => false
+                    }
+                    _ => match t2 {
+                        Some(t2) => match t2.as_ref() {
+                            Type::Any => false,
+                            _ => t1 == t2
+                        }
+                        None => false
+                    }
+                }
+                None => match t2 {
+                    None => true,
+                    _ => false
+                }
+            }
             (Self::Key, Self::Key)          => true,
             (Self::Closure, Self::Closure)  => true,
             (Self::Params, Self::Params)    => true,
