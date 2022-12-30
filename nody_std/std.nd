@@ -31,6 +31,40 @@
 		#(set @res (+ res n)))
 	(return res)
 })
+(def-global @sum $(nums int *) #(sum nums))
+(def-global @sum $(nums float *) #(sum nums))
+(def-global @min $(nums (vec int)) #{
+	(if (= 0 (len nums)) #(return 0))
+	(mut @v (nums 0))
+	(for @n nums
+		#(if (< n v) #(set @v n)))
+	(return v)
+})
+(def-global @min $(nums (vec float)) #{
+	(if (= 0 (len nums)) #(return 0.0))
+	(mut @v (nums 0))
+	(for @n nums
+		#(if (< n v) #(set @v n)))
+	(return v)
+})
+(def-global @min $(nums int *) #(min nums))
+(def-global @min $(nums float *) #(min nums))
+(def-global @max $(nums (vec int)) #{
+	(if (= 0 (len nums)) #(return 0))
+	(mut @v (nums 0))
+	(for @n nums
+		#(if (> n v) #(set @v n)))
+	(return v)
+})
+(def-global @max $(nums (vec float)) #{
+	(if (= 0 (len nums)) #(return 0.0))
+	(mut @v (nums 0))
+	(for @n nums
+		#(if (> n v) #(set @v n)))
+	(return v)
+})
+(def-global @max $(nums int *) #(max nums))
+(def-global @max $(nums float *) #(max nums))
 ; stings
 (def-global @concat $(strs str *) #{
 	(mut @res "")
@@ -52,11 +86,4 @@
 		#(set @res (res 0 (- (len res) (len sep)))))
 	(return res)
 })
-(def-global @join $(sep str strs str *) #{
-	(mut @res "")
-	(for @s strs
-		#(set @res (+ res s sep)))
-	(if (> (len strs) 0)
-		#(set @res (res 0 (- (len res) (len sep)))))
-	(return res)
-})
+(def-global @join $(sep str strs str *) #(join sep strs))
