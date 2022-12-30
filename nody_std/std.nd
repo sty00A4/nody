@@ -66,18 +66,13 @@
 (def-global @max $(nums int *) #(max nums))
 (def-global @max $(nums float *) #(max nums))
 ; stings
-(def-global @concat $(strs str *) #{
-	(mut @res "")
-	(for @s strs
-		#(set @res (+ res s)))
-	(return res)
-})
 (def-global @concat $(strs (vec str)) #{
 	(mut @res "")
 	(for @s strs
 		#(set @res (+ res s)))
 	(return res)
 })
+(def-global @concat $(strs str *) #(concat strs))
 (def-global @join $(sep str strs (vec str)) #{
 	(mut @res "")
 	(for @s strs
