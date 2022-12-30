@@ -103,6 +103,7 @@ pub fn interpret(node: &Node, context: &mut Context) -> Result<(Option<Value>, R
                             func_context.create_params(&func.params, values, poses, func.inline)?;
                             let (value, _) = interpret(&func.body, &mut func_context)?;
                             context.after_call(func_context, func.inline);
+                            context.pop();
                             return Ok((value, Return::None))
                         }
                         None => match context.get_var(v) {
@@ -230,6 +231,22 @@ pub fn interpret(node: &Node, context: &mut Context) -> Result<(Option<Value>, R
                         context.trace_push(&poses[0]);
                         Err(Error::ValuePatternNotFound(Type::Vector(Some(Box::new(Type::Any))), types))
                     }
+                    Value::Function(func) => {
+                        let mut func_context = Context::call(context, func.inline);
+                        func_context.create_params(&func.params, values, poses, func.inline)?;
+                        let (value, _) = interpret(&func.body, &mut func_context)?;
+                        context.after_call(func_context, func.inline);
+                        context.pop();
+                        Ok((value, Return::None))
+                    }
+                    Value::NativFunction(func) => {
+                        let mut func_context = Context::call(context, func.inline);
+                        func_context.create_params(&func.params, values, poses, func.inline)?;
+                        let res = (func.body)(&mut func_context)?;
+                        context.after_call(func_context, func.inline);
+                        context.pop();
+                        Ok(res)
+                    }
                     _ => {
                         context.trace_push(head.pos());
                         Err(Error::InvalidHeadValue(head_value.clone()))
@@ -240,6 +257,5 @@ pub fn interpret(node: &Node, context: &mut Context) -> Result<(Option<Value>, R
                 Err(Error::Expected)
             }
         }
-        _ => todo!("{node}")
     }
 }

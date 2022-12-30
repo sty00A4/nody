@@ -77,7 +77,7 @@
 	(mut @res "")
 	(for @s strs
 		#(set @res (+ res s sep)))
-	(if (> (len strs) 0)
+	(if (and (> (len strs) 0) (> (len sep) 0))
 		#(set @res (res 0 (- (len res) (len sep)))))
 	(return res)
 })
