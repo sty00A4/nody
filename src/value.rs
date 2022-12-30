@@ -281,10 +281,7 @@ impl PartialEq for Type {
                         None => false
                     }
                     _ => match t2 {
-                        Some(t2) => match t2.as_ref() {
-                            Type::Any => false,
-                            _ => t1 == t2
-                        }
+                        Some(t2) => t1 == t2,
                         None => false
                     }
                 }
