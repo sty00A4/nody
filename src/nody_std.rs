@@ -55,6 +55,31 @@ fn _set(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
         Ok((None, Return::None))
     } else { panic!("type checking doesn't work") }
 }
+fn _get(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
+    let id = context.get_var(&":id".to_string()).unwrap().clone();
+    if let Value::Key(id) = id {
+        match context.get_var(&id) {
+            Some(value) => Ok((Some(value.clone()), Return::None)),
+            None => Err(Error::NotDefined(id))
+        }
+    } else { panic!("type checking doesn't work") }
+}
+fn _exist(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
+    let id = context.get_var(&":id".to_string()).unwrap().clone();
+    if let Value::Key(id) = id {
+        Ok((Some(Value::Bool(context.get_var(&id).is_some())), Return::None))
+    } else { panic!("type checking doesn't work") }
+}
+fn _is_mut(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
+    let id = context.get_var(&":id".to_string()).unwrap().clone();
+    if let Value::Key(id) = id {
+        match context.is_mutable(&id) {
+            Some(mutable) => Ok((Some(Value::Bool(mutable)), Return::None)),
+            None => Err(Error::NotDefined(id))
+        }
+    } else { panic!("type checking doesn't work") }
+}
+// def
 fn _def(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
     let id = context.get_var(&":id".to_string()).unwrap().clone();
     let p = context.get_var(&":p".to_string()).unwrap().clone();
@@ -907,6 +932,24 @@ pub fn std_context() -> Result<Context, Error> {
         params: vec![(":id".to_string(), Type::Key, false), (":v".to_string(), Type::Any, false)],
         return_type: None,
         body: _set,
+        inline: true
+    }, pos.clone())?;
+    context.create_native_fn(String::from("get"), NativFunction {
+        params: vec![(":id".to_string(), Type::Key, false)],
+        return_type: Some(Type::Any),
+        body: _get,
+        inline: true
+    }, pos.clone())?;
+    context.create_native_fn(String::from("exist?"), NativFunction {
+        params: vec![(":id".to_string(), Type::Key, false)],
+        return_type: Some(Type::Bool),
+        body: _exist,
+        inline: true
+    }, pos.clone())?;
+    context.create_native_fn(String::from("mut?"), NativFunction {
+        params: vec![(":id".to_string(), Type::Key, false)],
+        return_type: Some(Type::Bool),
+        body: _is_mut,
         inline: true
     }, pos.clone())?;
     // def
