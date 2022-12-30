@@ -66,19 +66,19 @@
 (def-global @max $(nums int *) #(max nums))
 (def-global @max $(nums float *) #(max nums))
 ; stings
-(def-global @concat $(strs (vec str)) #{
+(def-global @concat $(values (vec any)) #{
 	(mut @res "")
-	(for @s strs
-		#(set @res (+ res s)))
+	(for @v values
+		#(set @res (+ res (str v))))
 	(return res)
 })
-(def-global @concat $(strs str *) #(concat strs))
-(def-global @join $(sep str strs (vec str)) #{
+(def-global @concat $(values any *) #(concat values))
+(def-global @join $(sep str values (vec any)) #{
 	(mut @res "")
-	(for @s strs
-		#(set @res (+ res s sep)))
+	(for @v values
+		#(set @res (+ res (str v) sep)))
 	(if (and (> (len res) 0) (> (len sep) 0))
 		#(set @res (res 0 (- (len res) (len sep)))))
 	(return res)
 })
-(def-global @join $(sep str strs str *) #(join sep strs))
+(def-global @join $(sep str values any *) #(join sep values))
