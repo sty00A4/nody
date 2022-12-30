@@ -102,3 +102,13 @@
 		#(if (not (digit? (num i))) #(return 0)))
 	(return (int num))
 })
+; debug
+(def-global @debug $(v any) #{(print v)(return v)})
+(def-global-inline @debug-var $(:var key) #(if (exist? :var) #{
+	(print (concat "--- " :var " ---"))
+	(print (concat "| content: " 		(get :var)))
+	(print (concat "| type: "  			(type (get :var))))
+	(print (concat "| mutable: " 		(mut? :var)))
+	(print (concat "----" (* "-" (len (str :var))) "----"))
+	(return (get :var))
+} #(print (concat :var " doesn't exist"))))
