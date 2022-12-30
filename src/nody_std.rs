@@ -259,6 +259,47 @@ fn _for(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
         } else { panic!("type checking doesn't work") }
     } else { panic!("type checking doesn't work") }
 }
+fn _for_length(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
+    let id = context.get_var(&":id".to_string()).unwrap().clone();
+    let pos = context.get_var_pos(&":id".to_string()).unwrap().clone();
+    let length = context.get_var(&":length".to_string()).unwrap().clone();
+    let body = context.get_var(&":body".to_string()).unwrap().clone();
+    if let Value::Closure(body) = body {
+        if let Value::Key(id) = id {
+            if let Value::Int(length) = length {
+                for i in 0..length {
+                    context.create_var(id.clone(), Value::Int(i), false, pos.clone(), true);
+                    let (value, ret) = interpret(&body, context)?;
+                    if ret == Return::Break { break }
+                    if ret == Return::Return { return Ok((value, ret)) }
+                }
+                Ok((None, Return::None))
+            } else { panic!("type checking doesn't work") }
+        } else { panic!("type checking doesn't work") }
+    } else { panic!("type checking doesn't work") }
+}
+fn _for_range(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
+    let id = context.get_var(&":id".to_string()).unwrap().clone();
+    let pos = context.get_var_pos(&":id".to_string()).unwrap().clone();
+    let start = context.get_var(&":start".to_string()).unwrap().clone();
+    let end = context.get_var(&":end".to_string()).unwrap().clone();
+    let body = context.get_var(&":body".to_string()).unwrap().clone();
+    if let Value::Closure(body) = body {
+        if let Value::Key(id) = id {
+            if let Value::Int(start) = start {
+                if let Value::Int(end) = end {
+                    for i in start..end {
+                        context.create_var(id.clone(), Value::Int(i), false, pos.clone(), true);
+                        let (value, ret) = interpret(&body, context)?;
+                        if ret == Return::Break { break }
+                        if ret == Return::Return { return Ok((value, ret)) }
+                    }
+                    Ok((None, Return::None))
+                } else { panic!("type checking doesn't work") }
+            } else { panic!("type checking doesn't work") }
+        } else { panic!("type checking doesn't work") }
+    } else { panic!("type checking doesn't work") }
+}
 fn _while(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
     let cond = context.get_var(&":cond".to_string()).unwrap().clone();
     let body = context.get_var(&":body".to_string()).unwrap().clone();
@@ -859,6 +900,27 @@ pub fn std_context() -> Result<Context, Error> {
         ],
         return_type: None,
         body: _for,
+        inline: true
+    }, pos.clone())?;
+    context.create_native_fn(String::from("for"), NativFunction {
+        params: vec![
+            (":id".to_string(), Type::Key, false),
+            (":length".to_string(), Type::Int, false),
+            (":body".to_string(), Type::Closure, false)
+        ],
+        return_type: None,
+        body: _for_length,
+        inline: true
+    }, pos.clone())?;
+    context.create_native_fn(String::from("for"), NativFunction {
+        params: vec![
+            (":id".to_string(), Type::Key, false),
+            (":start".to_string(), Type::Int, false),
+            (":end".to_string(), Type::Int, false),
+            (":body".to_string(), Type::Closure, false)
+        ],
+        return_type: None,
+        body: _for_range,
         inline: true
     }, pos.clone())?;
     context.create_native_fn(String::from("while"), NativFunction {
