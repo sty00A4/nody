@@ -62,9 +62,9 @@ pub fn print_trace(trace: &Vec<(Position)>) -> String {
         string.push_str("in ");
         string.push_str(pos.path.as_str());
         string.push(':');
-        string.push_str(pos.ln.start.to_string().as_str());
+        string.push_str((pos.ln.start + 1).to_string().as_str());
         string.push(':');
-        string.push_str(pos.col.start.to_string().as_str());
+        string.push_str((pos.col.start).to_string().as_str());
         string.push('\n');
         let text = match std::fs::read_to_string(&pos.path) {
             Ok(text) => text,

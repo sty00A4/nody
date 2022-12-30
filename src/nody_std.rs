@@ -65,13 +65,9 @@ fn _def(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
             if let Value::Closure(body) = body {
                 let func = Function::new(p, None, Box::new(body), false);
                 let len = context.scopes.len();
-                if context.fn_exists(&id) {
-                    context.create_fn(id, func, pos)?;
-                } else {
-                    match context.scopes.get_mut(len - 2) { // try to mutate the scope before the last
-                        Some(scope) => scope.create_fn(id, func, pos)?,
-                        None => context.create_fn(id, func, pos)?
-                    }
+                match context.scopes.get_mut(len - 2) { // try to mutate the scope before the last
+                    Some(scope) => scope.create_fn(id, func, pos)?,
+                    None => context.create_fn(id, func, pos)?
                 }
                 Ok((None, Return::None))
             } else { panic!("type checking doesn't work") }

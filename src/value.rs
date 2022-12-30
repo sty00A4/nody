@@ -1,14 +1,15 @@
 use crate::*;
 
+pub type Params = Vec<(String, Type, bool)>;
 #[derive(Clone)]
 pub struct Function {
-    pub params: Vec<(String, Type, bool)>,
+    pub params: Params,
     pub return_type: Option<Type>,
     pub body: NodeRef,
     pub inline: bool
 }
 impl Function {
-    pub fn new(params: Vec<(String, Type, bool)>, return_type: Option<Type>, body: NodeRef, inline: bool) -> Self {
+    pub fn new(params: Params, return_type: Option<Type>, body: NodeRef, inline: bool) -> Self {
         Self { params, return_type, body, inline }
     }
     /// return the params as a type vector
@@ -42,6 +43,16 @@ impl Function {
         }
         pattern.get(pattern_idx) == None
     }
+    pub fn params_match(&self, params: &Params) -> bool {
+        if self.params.len() != params.len() { return false }
+        for i in 0..self.params.len() {
+            if params.get(i) == None { return false }
+            let (_, param_type1, more1) = &self.params[i];
+            let (_, param_type2, more2) = &params[i];
+            if param_type1 != param_type2 || more1 != more2 { return false }
+        }
+        true
+    }
 }
 impl Debug for Function {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -65,13 +76,13 @@ impl PartialEq for Function {
 pub type NativeFunctionType = fn(&mut Context) -> Result<(Option<Value>, Return), Error>;
 #[derive(Clone)]
 pub struct NativFunction {
-    pub params: Vec<(String, Type, bool)>,
+    pub params: Params,
     pub return_type: Option<Type>,
     pub body: NativeFunctionType,
     pub inline: bool
 }
 impl NativFunction {
-    pub fn new(params: Vec<(String, Type, bool)>, return_type: Option<Type>, body: NativeFunctionType, inline: bool) -> Self {
+    pub fn new(params: Params, return_type: Option<Type>, body: NativeFunctionType, inline: bool) -> Self {
         Self { params, return_type, body, inline }
     }
     pub fn type_params(&self) -> Vec<Type> {
@@ -101,7 +112,7 @@ impl NativFunction {
         }
         pattern.get(pattern_idx) == None
     }
-    pub fn params_match(&self, params: &Vec<(String, Type, bool)>) -> bool {
+    pub fn params_match(&self, params: &Params) -> bool {
         if self.params.len() != params.len() { return false }
         for i in 0..self.params.len() {
             if params.get(i) == None { return false }
@@ -135,7 +146,7 @@ impl PartialEq for NativFunction {
 pub enum Value {
     Int(i64), Float(f64), Char(char), Bool(bool),
     String(String), Vector(Vec<Value>, Option<Type>),
-    Key(String), Closure(Node), Params(Vec<(String, Type, bool)>),
+    Key(String), Closure(Node), Params(Params),
     Function(Function), NativFunction(NativFunction), Object(Scope),
     Type(Type)
 }

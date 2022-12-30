@@ -23,7 +23,7 @@ impl Scope {
         Ok(())
     }
     pub fn create_fn(&mut self, id: String, func: Function, pos: Position) -> Result<(), Error> {
-        match self.get_fn_mut(&id, &func.type_params()) {
+        match self.get_fn_params_mut(&id, &func.params) {
             None => match self.funcs.get_mut(&id) {
                 Some(defs) => { // name already exists with different param pattern
                     defs.push((func, pos));
@@ -107,6 +107,32 @@ impl Scope {
             None => None
         }
     }
+    pub fn get_fn_params(&self, id: &String, params: &Params) -> Option<&Function> {
+        match self.funcs.get(id) {
+            Some(defs) => {
+                for (func, _) in defs.iter() {
+                    if func.params_match(params) {
+                        return Some(func)
+                    }
+                }
+                None
+            }
+            None => None
+        }
+    }
+    pub fn get_fn_params_mut(&mut self, id: &String, params: &Params) -> Option<&mut Function> {
+        match self.funcs.get_mut(id) {
+            Some(defs) => {
+                for (func, _) in defs.iter_mut() {
+                    if func.params_match(params) {
+                        return Some(func)
+                    }
+                }
+                None
+            }
+            None => None
+        }
+    }
     pub fn get_fn_first(&self, id: &String) -> Option<&Function> {
         match self.funcs.get(id) {
             Some(defs) => Some(&defs.first().unwrap().0),
@@ -147,7 +173,7 @@ impl Scope {
             None => None
         }
     }
-    pub fn get_native_fn_params(&self, id: &String, params: &Vec<(String, Type, bool)>) -> Option<&NativFunction> {
+    pub fn get_native_fn_params(&self, id: &String, params: &Params) -> Option<&NativFunction> {
         match self.native_funcs.get(id) {
             Some(defs) => {
                 for (func, _) in defs.iter() {
@@ -160,7 +186,7 @@ impl Scope {
             None => None
         }
     }
-    pub fn get_native_fn_params_mut(&mut self, id: &String, params: &Vec<(String, Type, bool)>) -> Option<&mut NativFunction> {
+    pub fn get_native_fn_params_mut(&mut self, id: &String, params: &Params) -> Option<&mut NativFunction> {
         match self.native_funcs.get_mut(id) {
             Some(defs) => {
                 for (func, _) in defs.iter_mut() {
@@ -246,6 +272,21 @@ impl Context {
         if self.global.get_fn_mut(id, pattern).is_some() { return Some(&mut self.global) }
         None
     }
+    // scope of fn params
+    pub fn get_scope_fn_params(&self, id: &String, params: &Params) -> Option<&Scope> {
+        for scope in self.scopes.iter().rev() {
+            if scope.get_fn_params(id, params).is_some() { return Some(scope) }
+        }
+        if self.global.get_fn_params(id, params).is_some() { return Some(&self.global) }
+        None
+    }
+    pub fn get_scope_fn_params_mut(&mut self, id: &String, params: &Params) -> Option<&mut Scope> {
+        for scope in self.scopes.iter_mut().rev() {
+            if scope.get_fn_params_mut(id, params).is_some() { return Some(scope) }
+        }
+        if self.global.get_fn_params_mut(id, params).is_some() { return Some(&mut self.global) }
+        None
+    }
     // scope of native fn
     pub fn get_scope_native_fn(&self, id: &String, pattern: &Vec<Type>) -> Option<&Scope> {
         for scope in self.scopes.iter().rev() {
@@ -270,7 +311,7 @@ impl Context {
         }
     }
     pub fn create_fn(&mut self, id: String, func: Function, pos: Position) -> Result<(), Error> {
-        match self.get_scope_fn_mut(&id, &func.type_params()) {
+        match self.get_scope_fn_params_mut(&id, &func.params) {
             None => self.scopes.last_mut().unwrap().create_fn(id, func, pos),
             Some(scope) => scope.create_fn(id, func, pos)
         }
@@ -281,7 +322,7 @@ impl Context {
     pub fn create_native_fn(&mut self, id: String, func: NativFunction, pos: Position) -> Result<(), Error> {
         self.global.create_native_fn(id, func, pos)
     }
-    pub fn create_params(&mut self, params: &Vec<(String, Type, bool)>, values: Vec<Value>, poses: Vec<Position>, inline: bool) -> Result<(), Error> {
+    pub fn create_params(&mut self, params: &Params, values: Vec<Value>, poses: Vec<Position>, inline: bool) -> Result<(), Error> {
         let mut value_idx: usize = 0; // in case of a param that accepts more values we need two iterator variables
         for i in 0..params.len() {
             let (param, param_type, more) = &params[i];
