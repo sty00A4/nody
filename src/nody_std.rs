@@ -730,7 +730,6 @@ fn _vec_push(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
     let value = context.get_var(&":v".to_string()).unwrap().clone();
     if let Value::Key(id) = id {
         if context.is_mutable(&id) == Some(false) { return Err(Error::Immutable(id)) }
-        let values = context.get_var_mut(&id);
         match context.get_var_mut(&id) {
             Some(values) => if let Value::Vector(values, typ) = values {
                 match typ {
@@ -753,11 +752,28 @@ fn _vec_push(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
         }
     } else { panic!("type checking doesn't work") }
 }
+fn _str_push(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
+    let id = context.get_var(&":id".to_string()).unwrap().clone();
+    let c = context.get_var(&":c".to_string()).unwrap().clone();
+    if let Value::Key(id) = id {
+        if let Value::Char(c) = c {
+            if context.is_mutable(&id) == Some(false) { return Err(Error::Immutable(id)) }
+            match context.get_var_mut(&id) {
+                Some(s) => if let Value::String(s) = s {
+                    s.push(c);
+                    Ok((None, Return::None))
+                } else {
+                    Err(Error::ExpectedType(Type::String, s.typ()))
+                }
+                None => Err(Error::NotDefined(id))
+            }
+        } else { panic!("type checking doesn't work") }
+    } else { panic!("type checking doesn't work") }
+}
 fn _vec_pop(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
     let id = context.get_var(&":id".to_string()).unwrap().clone();
     if let Value::Key(id) = id {
         if context.is_mutable(&id) == Some(false) { return Err(Error::Immutable(id)) }
-        let values = context.get_var_mut(&id);
         match context.get_var_mut(&id) {
             Some(values) => if let Value::Vector(values, _) = values {
                 Ok((values.pop(), Return::None))
@@ -773,24 +789,52 @@ fn _vec_pop_idx(context: &mut Context) -> Result<(Option<Value>, Return), Error>
     let idx = context.get_var(&":idx".to_string()).unwrap().clone();
     if let Value::Key(id) = id {
         if context.is_mutable(&id) == Some(false) { return Err(Error::Immutable(id)) }
-        let values = context.get_var_mut(&id);
         match context.get_var_mut(&id) {
             Some(values) => if let Value::Vector(values, _) = values {
                 if let Value::Int(idx) = idx {
-                    if idx < 0 {
-                        match values.get(values.len() - idx.abs() as usize) {
-                            Some(_) => Ok((Some(values.remove(values.len() - idx.abs() as usize)), Return::None)),
-                            None => Err(Error::IndexOutOfRange(values.len() - idx.abs() as usize, values.len()))
-                        }
-                    } else {
-                        match values.get(idx as usize) {
-                            Some(_) => Ok((Some(values.remove(idx as usize)), Return::None)),
-                            None => Err(Error::IndexOutOfRange(idx as usize, values.len()))
-                        }
+                    let idx = if idx < 0 { values.len() - idx.abs() as usize } else { idx as usize };
+                    match values.get(idx) {
+                        Some(_) => Ok((Some(values.remove(idx)), Return::None)),
+                        None => Err(Error::IndexOutOfRange(idx, values.len()))
                     }
                 } else { panic!("type checking doesn't work") }
             } else {
                 Err(Error::ExpectedType(Type::Vector(Some(Box::new(Type::Any))), values.typ()))
+            }
+            None => Err(Error::NotDefined(id))
+        }
+    } else { panic!("type checking doesn't work") }
+}
+fn _str_pop(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
+    let id = context.get_var(&":id".to_string()).unwrap().clone();
+    if let Value::Key(id) = id {
+        if context.is_mutable(&id) == Some(false) { return Err(Error::Immutable(id)) }
+        match context.get_var_mut(&id) {
+            Some(s) => if let Value::String(s) = s {
+                Ok((match s.pop() { Some(c) => Some(Value::Char(c)), _ => None }, Return::None))
+            } else {
+                Err(Error::ExpectedType(Type::String, s.typ()))
+            }
+            None => Err(Error::NotDefined(id))
+        }
+    } else { panic!("type checking doesn't work") }
+}
+fn _str_pop_idx(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
+    let id = context.get_var(&":id".to_string()).unwrap().clone();
+    let idx = context.get_var(&":idx".to_string()).unwrap().clone();
+    if let Value::Key(id) = id {
+        if context.is_mutable(&id) == Some(false) { return Err(Error::Immutable(id)) }
+        match context.get_var_mut(&id) {
+            Some(s) => if let Value::String(s) = s {
+                if let Value::Int(idx) = idx {
+                    let idx = if idx < 0 { s.len() - idx.abs() as usize } else { idx as usize };
+                    match s.get(idx .. idx + 1) {
+                        Some(_) => Ok((Some(Value::Char(s.remove(idx))), Return::None)),
+                        None => Err(Error::IndexOutOfRange(idx, s.len()))
+                    }
+                } else { panic!("type checking doesn't work") }
+            } else {
+                Err(Error::ExpectedType(Type::Vector(Some(Box::new(Type::Any))), s.typ()))
             }
             None => Err(Error::NotDefined(id))
         }
@@ -801,6 +845,15 @@ fn _contains(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
     let value = context.get_var(&"value".to_string()).unwrap();
     if let Value::Vector(values, _) = values {
         Ok((Some(Value::Bool(values.contains(value))), Return::None))
+    } else { panic!("type checking doesn't work") }
+}
+fn _contains_str(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
+    let s = context.get_var(&"s".to_string()).unwrap();
+    let c = context.get_var(&"c".to_string()).unwrap();
+    if let Value::String(s) = s {
+        if let Value::Char(c) = c {
+            Ok((Some(Value::Bool(s.contains(*c))), Return::None))
+        } else { panic!("type checking doesn't work") }
     } else { panic!("type checking doesn't work") }
 }
 // type
@@ -1311,6 +1364,12 @@ pub fn std_context() -> Result<Context, Error> {
         body: _vec_push,
         inline: true
     }, pos.clone())?;
+    context.create_native_fn(String::from("str-push"), NativFunction {
+        params: vec![(":id".to_string(), Type::Key, false), (":c".to_string(), Type::Char, false)],
+        return_type: None,
+        body: _str_push,
+        inline: true
+    }, pos.clone())?;
     context.create_native_fn(String::from("pop"), NativFunction {
         params: vec![(":id".to_string(), Type::Key, false)],
         return_type: Some(Type::Any),
@@ -1323,6 +1382,18 @@ pub fn std_context() -> Result<Context, Error> {
         body: _vec_pop_idx,
         inline: true
     }, pos.clone())?;
+    context.create_native_fn(String::from("str-pop"), NativFunction {
+        params: vec![(":id".to_string(), Type::Key, false)],
+        return_type: Some(Type::Char),
+        body: _str_pop,
+        inline: true
+    }, pos.clone())?;
+    context.create_native_fn(String::from("str-pop"), NativFunction {
+        params: vec![(":id".to_string(), Type::Key, false), (":idx".to_string(), Type::Int, false)],
+        return_type: Some(Type::Char),
+        body: _str_pop_idx,
+        inline: true
+    }, pos.clone())?;
     context.create_native_fn(String::from("contains"), NativFunction {
         params: vec![
             ("values".to_string(), Type::Vector(Some(Box::new(Type::Any))), false),
@@ -1330,6 +1401,15 @@ pub fn std_context() -> Result<Context, Error> {
         ],
         return_type: Some(Type::Bool),
         body: _contains,
+        inline: false
+    }, pos.clone())?;
+    context.create_native_fn(String::from("contains"), NativFunction {
+        params: vec![
+            ("s".to_string(), Type::String, false),
+            ("c".to_string(), Type::Char, false)
+        ],
+        return_type: Some(Type::Bool),
+        body: _contains_str,
         inline: false
     }, pos.clone())?;
     // type
