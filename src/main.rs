@@ -17,6 +17,7 @@ use std::collections::HashMap;
 use std::fmt::{Debug, Display};
 use core::num::IntErrorKind;
 use std::cmp::{min, max};
+use std::io::Write;
 
 pub fn run(path: &String, text: String) -> Result<(Option<Value>, Return), Error> {
     let mut context = std_context()?;

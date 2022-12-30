@@ -226,8 +226,8 @@ fn _break(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
 fn _do(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
     let node = context.get_var(&":node".to_string()).unwrap().clone();
     if let Value::Closure(node) = node {
-        let (value, ret) = interpret(&node, context)?;
-        Ok((value, ret))
+        let res = interpret(&node, context)?;
+        Ok(res)
     } else { panic!("type checking doesn't work") }
 }
 fn _if(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
@@ -703,6 +703,17 @@ fn _print(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
         Ok((None, Return::None))
     } else { panic!("type checking doesn't work") }
 }
+fn _input(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
+    let msg = context.get_var(&"msg".to_string()).unwrap();
+    if let Value::String(msg) = msg {
+        print!("{msg}");
+        std::io::stdout().flush();
+        let mut input = String::new();
+        std::io::stdin().read_line(&mut input);
+        input = input.trim().to_string();
+        Ok((Some(Value::String(input)), Return::None))
+    } else { panic!("type checking doesn't work") }
+}
 
 pub fn std_context() -> Result<Context, Error> {
     let mut context = Context::new();
@@ -1172,6 +1183,12 @@ pub fn std_context() -> Result<Context, Error> {
         params: vec![("v".to_string(), Type::Any, true)],
         return_type: None,
         body: _print,
+        inline: false
+    }, pos.clone())?;
+    context.create_native_fn(String::from("input"), NativFunction {
+        params: vec![("msg".to_string(), Type::String, false)],
+        return_type: Some(Type::String),
+        body: _input,
         inline: false
     }, pos.clone())?;
     let std_path = String::from("nody_std/std.nd");
