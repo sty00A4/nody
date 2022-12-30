@@ -16,12 +16,14 @@ pub fn interpret(node: &Node, context: &mut Context) -> Result<(Option<Value>, R
             for n in nodes.iter() {
                 let (value, _) = interpret(n, context)?;
                 if value.is_none() {
+                    context.trace_push(n.pos());
                     return Err(Error::Expected)
                 }
                 let value = value.unwrap();
                 if typ.is_none() {
                     typ = Some(value.typ());
                 } else if typ != Some(value.typ()) {
+                    context.trace_push(n.pos());
                     return Err(Error::ExpectedType(typ.unwrap(), value.typ()))
                 }
                 values.push(value);
@@ -29,9 +31,12 @@ pub fn interpret(node: &Node, context: &mut Context) -> Result<(Option<Value>, R
             Ok((Some(Value::Vector(values, typ)), Return::None))
         }
         Node::Type { v, pos:_ } => Ok((Some(Value::Type(v.clone())), Return::None)),
-        Node::Word { v, pos:_ } => match context.get_var(v) {
+        Node::Word { v, pos } => match context.get_var(v) {
             Some(v) => Ok((Some(v.clone()), Return::None)),
-            None => Err(Error::NotDefined(v.clone()))
+            None => {
+                context.trace_push(pos);
+                Err(Error::NotDefined(v.clone()))
+            }
         }
         Node::Key { v, pos:_ } => Ok((Some(Value::Key(v.clone())), Return::None)),
         Node::Closure { node, pos } => Ok((Some(Value::Closure(node.as_ref().clone())), Return::None)),
@@ -43,9 +48,11 @@ pub fn interpret(node: &Node, context: &mut Context) -> Result<(Option<Value>, R
                     if let Value::Type(typ) = typ {
                         params.push((param.clone(), typ, *more));
                     } else {
+                        context.trace_push(pos);
                         return Err(Error::ExpectedType(Type::Type, typ.typ()))
                     }
                 } else {
+                    context.trace_push(pos);
                     return Err(Error::Expected)
                 }
             }
@@ -63,7 +70,7 @@ pub fn interpret(node: &Node, context: &mut Context) -> Result<(Option<Value>, R
             context.pop();
             Ok((None, Return::None))
         }
-        Node::Node { head, args, pos:_ } => {
+        Node::Node { head, args, pos } => {
             context.push();
             // get arguements
             let mut values: Vec<Value> = vec![];
@@ -75,11 +82,12 @@ pub fn interpret(node: &Node, context: &mut Context) -> Result<(Option<Value>, R
                     types.push(value.typ());
                     values.push(value);
                 } else {
+                    context.trace_push(arg.pos());
                     return Err(Error::ExpectedArg)
                 }
             }
             // try to get a function
-            if let Node::Word { v, pos:_ } = head.as_ref() {
+            if let Node::Word { v, pos: word_pos } = head.as_ref() {
                 match context.get_native_fn(v, &types) {
                     Some(func) => {
                         let mut func_context = Context::call(context, func.inline);
@@ -100,8 +108,10 @@ pub fn interpret(node: &Node, context: &mut Context) -> Result<(Option<Value>, R
                         None => match context.get_var(v) {
                             Some(_) => {}
                             None => if context.fn_exists(v) || context.native_fn_exists(v) {
+                                context.trace_push(word_pos);
                                 return Err(Error::FunctionPatternNotFound(v.clone(), types))
                             } else {
+                                context.trace_push(word_pos);
                                 return Err(Error::NotDefined(v.clone()))
                             }
                         }
@@ -125,8 +135,10 @@ pub fn interpret(node: &Node, context: &mut Context) -> Result<(Option<Value>, R
                             return Ok(res)
                         }
                         None => if context.fn_exists(&typ.to_string()) || context.native_fn_exists(&typ.to_string()) {
+                            context.trace_push(pos);
                             Err(Error::InvalidCastBetween(typ.clone(), types[0].clone()))
                         } else {
+                            context.trace_push(head.pos());
                             Err(Error::InvalidHeadCastType(typ.clone()))
                         }
                     }
@@ -136,22 +148,35 @@ pub fn interpret(node: &Node, context: &mut Context) -> Result<(Option<Value>, R
                             Value::Int(idx) => if *idx < 0 {
                                 match vec_values.get(vec_values.len() - idx.abs() as usize) {
                                     Some(value) => Ok((Some(value.clone()), Return::None)),
-                                    None => Err(Error::IndexOutOfRange(vec_values.len() - idx.abs() as usize, vec_values.len()))
+                                    None => {
+                                        context.trace_push(&poses[0]);
+                                        Err(Error::IndexOutOfRange(vec_values.len() - idx.abs() as usize, vec_values.len()))
+                                    }
                                 }
                             } else {
                                 match vec_values.get(*idx as usize) {
                                     Some(value) => Ok((Some(value.clone()), Return::None)),
-                                    None => Err(Error::IndexOutOfRange(*idx as usize, vec_values.len()))
+                                    None => {
+                                        context.trace_push(&poses[0]);
+                                        Err(Error::IndexOutOfRange(*idx as usize, vec_values.len()))
+                                    }
                                 }
                             }
-                            _ => Err(Error::ExpectedTypes(vec![Type::Int], types[0].clone()))
+                            _ => {
+                                context.trace_push(&poses[0]);
+                                Err(Error::ExpectedTypes(vec![Type::Int], types[0].clone()))
+                            }
                         }
                     } else {
                         todo!()
                     }
-                    _ => Err(Error::InvalidHeadValue(head_value.clone()))
+                    _ => {
+                        context.trace_push(head.pos());
+                        Err(Error::InvalidHeadValue(head_value.clone()))
+                    }
                 }
             } else {
+                context.trace_push(head.pos());
                 Err(Error::Expected)
             }
         }

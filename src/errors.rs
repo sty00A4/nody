@@ -55,3 +55,24 @@ impl Display for Error {
         }
     }
 }
+
+pub fn print_trace(trace: &Vec<(Position)>) -> String {
+    let mut string = String::new();
+    for pos in trace.iter() {
+        string.push_str("in ");
+        string.push_str(pos.path.as_str());
+        string.push(':');
+        string.push_str(pos.ln.start.to_string().as_str());
+        string.push(':');
+        string.push_str(pos.col.start.to_string().as_str());
+        string.push('\n');
+        let text = match std::fs::read_to_string(&pos.path) {
+            Ok(text) => text,
+            Err(_) => String::from("FILE NOT FOUND")
+        };
+        let text_lines: Vec<&str> = text.split("\n").collect();
+        let lines = text_lines.get(pos.ln.clone()).unwrap_or_else(|| &["LINES OUT OF RANGE"]);
+        for line in lines { string.push_str(line) }
+    }
+    string
+}

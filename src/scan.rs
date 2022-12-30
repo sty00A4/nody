@@ -90,7 +90,7 @@ impl Scanner {
         if nodes.len() == 1 {
             Ok(nodes[0].clone())
         } else {
-            Ok(Node::Body { nodes, pos: Position::new(0..self.ln, 0..self.col, &self.path) })
+            Ok(Node::Body { nodes, pos: Position::new(0..self.ln+1, 0..self.col, &self.path) })
         }
     }
     pub fn node(&mut self) -> Result<Option<Node>, Error> {
@@ -125,7 +125,7 @@ impl Scanner {
                 }
                 if self.get() == '\0' { return Err(Error::UnexpectedEnd) }
                 self.advance();
-                Ok(Some(Node::Node { head, args, pos: Position::new(start_ln..self.ln, start_col..self.col, &self.path) }))
+                Ok(Some(Node::Node { head, args, pos: Position::new(start_ln..self.ln+1, start_col..self.col, &self.path) }))
             }
             '{' => {
                 let (start_ln, start_col) = (self.ln, self.col);
@@ -140,7 +140,7 @@ impl Scanner {
                 if nodes.len() == 1 {
                     Ok(Some(nodes[0].clone()))
                 } else {
-                    Ok(Some(Node::Body { nodes, pos: Position::new(start_ln..self.ln, start_col..self.col, &self.path) }))
+                    Ok(Some(Node::Body { nodes, pos: Position::new(start_ln..self.ln+1, start_col..self.col, &self.path) }))
                 }
             }
             '[' => {
@@ -155,7 +155,7 @@ impl Scanner {
                 }
                 if self.get() == '\0' { return Err(Error::UnexpectedEnd) }
                 self.advance();
-                Ok(Some(Node::Vector { nodes, pos: Position::new(start_ln..self.ln, start_col..self.col, &self.path) }))
+                Ok(Some(Node::Vector { nodes, pos: Position::new(start_ln..self.ln+1, start_col..self.col, &self.path) }))
             }
             '@' => {
                 let (start_ln, start_col) = (self.ln, self.col);
@@ -166,7 +166,7 @@ impl Scanner {
                     self.advance();
                 }
                 if self.get() == '\0' { return Err(Error::UnexpectedEnd) }
-                Ok(Some(Node::Key { v: word, pos: Position::new(start_ln..self.ln, start_col..self.col, &self.path) }))
+                Ok(Some(Node::Key { v: word, pos: Position::new(start_ln..self.ln+1, start_col..self.col, &self.path) }))
             }
             '#' => {
                 let (start_ln, start_col) = (self.ln, self.col);
@@ -174,7 +174,7 @@ impl Scanner {
                 let node = self.node()?;
                 if node.is_none() { return Err(Error::UnexpectedEnd) }
                 let node = Box::new(node.unwrap());
-                Ok(Some(Node::Closure { node, pos: Position::new(start_ln..self.ln, start_col..self.col, &self.path) }))
+                Ok(Some(Node::Closure { node, pos: Position::new(start_ln..self.ln+1, start_col..self.col, &self.path) }))
             }
             '$' => {
                 let (start_ln, start_col) = (self.ln, self.col);
@@ -208,7 +208,7 @@ impl Scanner {
                             typ.push(self.get());
                             self.advance();
                         }
-                        let pos = Position::new(start_ln..self.ln, start_col..self.col, &self.path);
+                        let pos = Position::new(start_ln..self.ln+1, start_col..self.col, &self.path);
                         if typ.len() == 0 { return Err(Error::ExpectedWord) }
                         self.advance_ws();
                         let typ = Box::new(match typ.as_str() {
@@ -236,7 +236,7 @@ impl Scanner {
                 }
                 if self.get() == '\0' { return Err(Error::UnexpectedEnd) }
                 self.advance();
-                Ok(Some(Node::Params { params, pos: Position::new(start_ln..self.ln, start_col..self.col, &self.path) }))
+                Ok(Some(Node::Params { params, pos: Position::new(start_ln..self.ln+1, start_col..self.col, &self.path) }))
             }
             '"' => {
                 let (start_ln, start_col) = (self.ln, self.col);
@@ -260,7 +260,7 @@ impl Scanner {
                 if self.get() == '\0' { return Err(Error::UnclosedString) }
                 self.advance();
                 match string.parse::<String>() {
-                    Ok(string) => Ok(Some(Node::String { v: string, pos: Position::new(start_ln..self.ln, start_col..self.col, &self.path) })),
+                    Ok(string) => Ok(Some(Node::String { v: string, pos: Position::new(start_ln..self.ln+1, start_col..self.col, &self.path) })),
                     Err(_) => Err(Error::ParseString(string))
                 }
             }
@@ -286,7 +286,7 @@ impl Scanner {
                 if self.get() == '\0' { return Err(Error::UnclosedChar) }
                 self.advance();
                 match c.parse::<char>() {
-                    Ok(c) => Ok(Some(Node::Char { v: c, pos: Position::new(start_ln..self.ln, start_col..self.col, &self.path) })),
+                    Ok(c) => Ok(Some(Node::Char { v: c, pos: Position::new(start_ln..self.ln+1, start_col..self.col, &self.path) })),
                     Err(_) => Err(Error::ParseChar(c))
                 }
             }
@@ -306,12 +306,12 @@ impl Scanner {
                         self.advance();
                     }
                     match number.parse() {
-                        Ok(number) => Ok(Some(Node::Float { v: number, pos: Position::new(start_ln..self.ln, start_col..self.col, &self.path) })),
+                        Ok(number) => Ok(Some(Node::Float { v: number, pos: Position::new(start_ln..self.ln+1, start_col..self.col, &self.path) })),
                         Err(_) => Err(Error::ParseFloat(number))
                     }
                 } else {
                     match number.parse() {
-                        Ok(number) => Ok(Some(Node::Int { v: number, pos: Position::new(start_ln..self.ln, start_col..self.col, &self.path) })),
+                        Ok(number) => Ok(Some(Node::Int { v: number, pos: Position::new(start_ln..self.ln+1, start_col..self.col, &self.path) })),
                         Err(e) => match e.kind() {
                             IntErrorKind::PosOverflow => Err(Error::ParseIntOverflow(number)),
                             IntErrorKind::NegOverflow => Err(Error::ParseIntNegOverflow(number)),
@@ -328,7 +328,7 @@ impl Scanner {
                     word.push(self.get());
                     self.advance();
                 }
-                let pos = Position::new(start_ln..self.ln, start_col..self.col, &self.path);
+                let pos = Position::new(start_ln..self.ln+1, start_col..self.col, &self.path);
                 Ok(Some(match word.as_str() {
                     "true"      => Node::Bool { v: true, pos },
                     "false"     => Node::Bool { v: false, pos },

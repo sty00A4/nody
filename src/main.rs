@@ -19,13 +19,7 @@ use core::num::IntErrorKind;
 use std::cmp::{min, max};
 
 pub fn run(path: &String, text: String) -> Result<(Option<Value>, Return), Error> {
-    let mut context = match std_context() {
-        Ok(context) => context,
-        Err(e) => {
-            println!("{e}");
-            Context::new()
-        }
-    };
+    let mut context = std_context()?;
     interpret(&scan_file(path, text)?, &mut context)
 }
 pub fn run_context(path: &String, text: String, context: &mut Context) -> Result<(Option<Value>, Return), Error> {
@@ -48,10 +42,11 @@ fn main() {
     let args: Vec<String> = std::env::args().collect();
     let mut args = args.iter();
     args.next();
+    let mut context = std_context().unwrap_or_else(|e| panic!("{e}"));
     match args.next() {
-        Some(path) => match run_file(path) {
+        Some(path) => match run_file_context(path, &mut context) {
             Ok((value, ret)) => if let Some(value) = value { println!("{value}") }
-            Err(e) => println!("{e}")
+            Err(e) => println!("{e}\n{}", print_trace(&context.trace))
         }
         None => {
             println!("This is Nody interpreter is written in Rust.");

@@ -230,8 +230,8 @@ fn _break(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
 fn _do(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
     let node = context.get_var(&":node".to_string()).unwrap().clone();
     if let Value::Closure(node) = node {
-        let (value, _) = interpret(&node, context)?;
-        Ok((value, Return::None))
+        let (value, ret) = interpret(&node, context)?;
+        Ok((value, ret))
     } else { panic!("type checking doesn't work") }
 }
 fn _if(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
