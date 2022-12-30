@@ -1305,19 +1305,19 @@ pub fn std_context() -> Result<Context, Error> {
         body: _vec,
         inline: false
     }, pos.clone())?;
-    context.create_native_fn(String::from("vec-push"), NativFunction {
+    context.create_native_fn(String::from("push"), NativFunction {
         params: vec![(":id".to_string(), Type::Key, false), (":v".to_string(), Type::Any, false)],
         return_type: Some(Type::Any),
         body: _vec_push,
         inline: true
     }, pos.clone())?;
-    context.create_native_fn(String::from("vec-pop"), NativFunction {
+    context.create_native_fn(String::from("pop"), NativFunction {
         params: vec![(":id".to_string(), Type::Key, false)],
         return_type: Some(Type::Any),
         body: _vec_pop,
         inline: true
     }, pos.clone())?;
-    context.create_native_fn(String::from("vec-pop"), NativFunction {
+    context.create_native_fn(String::from("pop"), NativFunction {
         params: vec![(":id".to_string(), Type::Key, false), (":idx".to_string(), Type::Int, false)],
         return_type: Some(Type::Any),
         body: _vec_pop_idx,
