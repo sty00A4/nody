@@ -754,7 +754,8 @@ fn _vec_of(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
     let v = context.get_var(&"v".to_string()).unwrap().clone();
     let t = context.get_var(&"t".to_string()).unwrap().clone();
     if let Value::Type(t) = t {
-        if let Value::Vector(values, _) = v {
+        if let Value::Vector(values, typ) = v {
+            if let Some(typ) = typ { if typ != t { return Err(Error::ExpectedType(t, typ)) } }
             Ok((Some(Value::Vector(values, Some(t))), Return::None))
         } else { panic!("type checking doesn't work") }
     } else { panic!("type checking doesn't work") }
