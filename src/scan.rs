@@ -77,8 +77,14 @@ impl Scanner {
         }
     }
     pub fn advance_ws(&mut self) {
-        while WS.contains(&self.get()) {
-            self.advance();
+        while WS.contains(&self.get()) || self.get() == ';' {
+            if self.get() == ';' {
+                while self.get() == ';' && self.get() != '\0' {
+                    while self.get() != '\n' && self.get() != '\0' { self.advance(); }
+                }
+            } else {
+                self.advance();
+            }
         }
     }
     pub fn scan(&mut self) -> Result<Node, Error> {
@@ -98,13 +104,12 @@ impl Scanner {
         self.advance_ws();
         match self.get() {
             ')' | ']' | '}' => Err(Error::UnexpectedSymbol(self.get())),
-            ';' => {
-                while self.get() == ';' && self.get() != '\0' {
-                    while self.get() != '\n' && self.get() != '\0' { self.advance(); }
-                    self.advance_ws();
-                }
-                Ok(None)
-            }
+            // ';' => {
+            //     while self.get() == ';' && self.get() != '\0' {
+            //         while self.get() != '\n' && self.get() != '\0' { self.advance(); }
+            //     }
+            //     Ok(None)
+            // }
             '(' => {
                 let (start_ln, start_col) = (self.ln, self.col);
                 self.advance(); self.advance_ws();
