@@ -3,6 +3,9 @@
     #(do (? :cond :case #())))
 (def-global-inline @if $(:cond bool :case closure :else closure)
     #(do (? :cond :case :else)))
+; vars
+(def-global-inline @inc! $(:var key) #(if (exist? :var) #(set :var (+ (get :var) 1))))
+(def-global-inline @dec! $(:var key) #(if (exist? :var) #(set :var (- (get :var) 1))))
 ; logic
 (def-global @not $(v bool) #(? (bool v) false true))
 (def-global @or $(a any b any) #(? (bool a) a b))
