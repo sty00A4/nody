@@ -1,0 +1,5 @@
+(mut @l (vec (vec int) []))
+(push @l [1 2 3])
+(push @l [4 5 6])
+(push @l [7 8 9])
+(for @row l #{(for @col row #(write col))(write '\n')})
