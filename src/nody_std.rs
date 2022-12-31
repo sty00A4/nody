@@ -750,6 +750,15 @@ fn _vec(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
         Ok((Some(Value::Type(Type::Vector(Some(Box::new(t.clone()))))), Return::None))
     } else { panic!("type checking doesn't work") }
 }
+fn _vec_of(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
+    let v = context.get_var(&"v".to_string()).unwrap().clone();
+    let t = context.get_var(&"t".to_string()).unwrap().clone();
+    if let Value::Type(t) = t {
+        if let Value::Vector(values, _) = v {
+            Ok((Some(Value::Vector(values, Some(t))), Return::None))
+        } else { panic!("type checking doesn't work") }
+    } else { panic!("type checking doesn't work") }
+}
 fn _vec_push(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
     let id = context.get_var(&":id".to_string()).unwrap().clone();
     let value = context.get_var(&":v".to_string()).unwrap().clone();
@@ -1399,6 +1408,15 @@ pub fn std_context() -> Result<Context, Error> {
         params: vec![("t".to_string(), Type::Type, false)],
         return_type: Some(Type::Vector(Some(Box::new(Type::Any)))),
         body: _vec,
+        inline: false
+    }, pos.clone())?;
+    context.create_native_fn(String::from("vec"), NativFunction {
+        params: vec![
+            ("t".to_string(), Type::Type, false),
+            ("v".to_string(), Type::Vector(Some(Box::new(Type::Any))), false)
+        ],
+        return_type: Some(Type::Vector(Some(Box::new(Type::Any)))),
+        body: _vec_of,
         inline: false
     }, pos.clone())?;
     context.create_native_fn(String::from("push"), NativFunction {
