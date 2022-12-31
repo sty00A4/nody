@@ -1,5 +1,9 @@
 use crate::*;
 
+pub fn find_index(idx: &i64, size: usize) -> usize {
+    if *idx < 0 { size - idx.abs() as usize } else { *idx as usize }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Return { None, Return, Break, Continue }
 pub fn interpret(node: &Node, context: &mut Context) -> Result<(Option<Value>, Return), Error> {
@@ -146,20 +150,13 @@ pub fn interpret(node: &Node, context: &mut Context) -> Result<(Option<Value>, R
                     Value::Vector(vec_values, typ) => if values.len() == 1 {
                         context.pop();
                         match &values[0] {
-                            Value::Int(idx) => if *idx < 0 {
-                                match vec_values.get(vec_values.len() - idx.abs() as usize) {
+                            Value::Int(idx) => {
+                                let idx = find_index(idx, vec_values.len());
+                                match vec_values.get(idx) {
                                     Some(value) => Ok((Some(value.clone()), Return::None)),
                                     None => {
                                         context.trace_push(&poses[0]);
-                                        Err(Error::IndexOutOfRange(vec_values.len() - idx.abs() as usize, vec_values.len()))
-                                    }
-                                }
-                            } else {
-                                match vec_values.get(*idx as usize) {
-                                    Some(value) => Ok((Some(value.clone()), Return::None)),
-                                    None => {
-                                        context.trace_push(&poses[0]);
-                                        Err(Error::IndexOutOfRange(*idx as usize, vec_values.len()))
+                                        Err(Error::IndexOutOfRange(idx, vec_values.len()))
                                     }
                                 }
                             }
@@ -175,23 +172,12 @@ pub fn interpret(node: &Node, context: &mut Context) -> Result<(Option<Value>, R
                     Value::String(string) => if values.len() == 1 {
                         context.pop();
                         if let Value::Int(idx) = &values[0] {
-                            if *idx < 0 {
-                                let i = string.len() - idx.abs() as usize;
-                                match string.get(i .. i + 1) {
-                                    Some(c) => Ok((Some(Value::Char(c.chars().collect::<Vec<char>>()[0])), Return::None)),
-                                    None => {
-                                        context.trace_push(&poses[0]);
-                                        Err(Error::IndexOutOfRange(string.len() - idx.abs() as usize, string.len()))
-                                    }
-                                }
-                            } else {
-                                let i = *idx as usize;
-                                match string.get(i .. i + 1) {
-                                    Some(c) => Ok((Some(Value::Char(c.chars().collect::<Vec<char>>()[0])), Return::None)),
-                                    None => {
-                                        context.trace_push(&poses[0]);
-                                        Err(Error::IndexOutOfRange(*idx as usize, string.len()))
-                                    }
+                            let idx = find_index(idx, string.len());
+                            match string.get(idx .. idx + 1) {
+                                Some(c) => Ok((Some(Value::Char(c.chars().collect::<Vec<char>>()[0])), Return::None)),
+                                None => {
+                                    context.trace_push(&poses[0]);
+                                    Err(Error::IndexOutOfRange(idx, string.len()))
                                 }
                             }
                         } else {

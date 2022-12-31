@@ -227,6 +227,8 @@ impl Scanner {
                             "bool"      => Node::Type { v: Type::Bool, pos },
                             "str"       => Node::Type { v: Type::String, pos },
                             "key"       => Node::Type { v: Type::Key, pos },
+                            "path"      => Node::Type { v: Type::Path, pos },
+                            "index"     => Node::Type { v: Type::Index, pos },
                             "closure"   => Node::Type { v: Type::Closure, pos },
                             "vec"       => Node::Type { v: Type::Vector(None), pos },
                             "obj"       => Node::Type { v: Type::Object, pos },

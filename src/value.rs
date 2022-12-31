@@ -143,10 +143,139 @@ impl PartialEq for NativFunction {
     }
 }
 #[derive(Clone, PartialEq)]
+pub enum PathWays { Path(Path), Index(Box<Index>) }
+#[derive(Clone, PartialEq)]
+pub struct Path {
+    pub path: Vec<String>
+}
+impl Path {
+    pub fn new(path: Vec<String>) -> Self { Self { path } }
+    pub fn get(&self, context: &mut Context) -> Result<Option<&Value>, Error> {
+        todo!("path.get(context)");
+    }
+    pub fn get_mut(&mut self, context: &mut Context) -> Result<Option<&mut Value>, Error> {
+        todo!("path.get_mut(context)")
+    }
+    pub fn is_mutable(&self, context: &mut Context) -> Result<Option<bool>, Error> {
+        todo!("path.is_mutable(context)")
+    }
+}
+impl Debug for Path {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "@{}", self.path.join("@"))
+    }
+}
+impl Display for Path {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{self:?}")
+    }
+}
+#[derive(Clone, PartialEq)]
+pub struct Index {
+    pub path: PathWays,
+    pub idx: usize
+}
+impl Index {
+    pub fn new(path: PathWays, idx: usize) -> Self { Self { path, idx } }
+    pub fn get(&self, context: &mut Context) -> Result<Option<&Value>, Error> {
+        match &self.path {
+            PathWays::Path(path) => match path.get(context)? {
+                Some(value) => match value {
+                    Value::Vector(values, _) => match values.get(values.len() - self.idx) {
+                        Some(value) => Ok(Some(value)),
+                        None => {
+                            Err(Error::IndexOutOfRange(values.len() - self.idx, values.len()))
+                        }
+                    }
+                    _ => {
+                        Err(Error::ExpectedType(Type::Vector(None), value.typ()))
+                    }
+                }
+                _ => Ok(None)
+            }
+            PathWays::Index(index) => match index.get(context)? {
+                Some(value) => match value {
+                    Value::Vector(values, _) => match values.get(values.len() - self.idx) {
+                        Some(value) => Ok(Some(value)),
+                        None => {
+                            Err(Error::IndexOutOfRange(values.len() - self.idx, values.len()))
+                        }
+                    }
+                    _ => {
+                        Err(Error::ExpectedType(Type::Vector(None), value.typ()))
+                    }
+                }
+                _ => Ok(None)
+            }
+        }
+    }
+    pub fn get_mut(&mut self, context: &mut Context) -> Result<Option<&mut Value>, Error> {
+        match &mut self.path {
+            PathWays::Path(path) => match path.get_mut(context)? {
+                Some(value) =>  match value {
+                    Value::Vector(values, _) => {
+                        let len = values.len();
+                        match values.get_mut(len - self.idx) {
+                            Some(value) => Ok(Some(value)),
+                            None => {
+                                Err(Error::IndexOutOfRange(len - self.idx, len))
+                            }
+                        }
+                    }
+                    _ => {
+                        Err(Error::ExpectedType(Type::Vector(None), value.typ()))
+                    }
+                }
+                _ => Ok(None)
+            }
+            PathWays::Index(index) => match index.get_mut(context)? {
+                Some(value) => match value {
+                    Value::Vector(values, _) => {
+                        let len = values.len();
+                        match values.get_mut(len - self.idx) {
+                            Some(value) => Ok(Some(value)),
+                            None => {
+                                Err(Error::IndexOutOfRange(len - self.idx, len))
+                            }
+                        }
+                    }
+                    _ => {
+                        Err(Error::ExpectedType(Type::Vector(None), value.typ()))
+                    }
+                }
+                _ => Ok(None)
+            }
+        }
+    }
+    pub fn is_mutable(&self, context: &mut Context) -> Result<Option<bool>, Error> {
+        match &self.path {
+            PathWays::Path(path) => path.is_mutable(context),
+            PathWays::Index(index) => index.is_mutable(context)
+        }
+    }
+}
+impl Debug for Index {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match &self.path {
+            PathWays::Path(path) => write!(f, "{:?}[{:?}]", path, self.idx),
+            PathWays::Index(index) => write!(f, "{:?}[{:?}]", index, self.idx)
+        }
+    }
+}
+impl Display for Index {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match &self.path {
+            PathWays::Path(path) => write!(f, "{}[{}]", path, self.idx),
+            PathWays::Index(index) => write!(f, "{}[{}]", index, self.idx)
+        }
+    }
+}
+#[derive(Clone, PartialEq)]
 pub enum Value {
     Int(i64), Float(f64), Char(char), Bool(bool),
     String(String), Vector(Vec<Value>, Option<Type>),
-    Key(String), Closure(Node), Params(Params),
+    Key(String), Path(Path), Index(Index),
+    Closure(Node), Params(Params),
     Function(Function), NativFunction(NativFunction), Object(Scope),
     Type(Type)
 }
@@ -160,6 +289,8 @@ impl Value {
             Self::String(_)        => Type::String,
             Self::Vector(_, t)     => if let Some(t) = t { Type::Vector(Some(Box::new(t.clone()))) } else { Type::Vector(None) }
             Self::Key(_)           => Type::Key,
+            Self::Path(_)          => Type::Path,
+            Self::Index(_)         => Type::Index,
             Self::Closure(_)       => Type::Closure,
             Self::Params(_)        => Type::Params,
             Self::Function(f)      => Type::Function(f.type_params(), f.return_type_boxed()),
@@ -179,6 +310,8 @@ impl Debug for Value {
             Self::String(v)        => format!("{v:?}"),
             Self::Vector(v, _)     => format!("{v:?}"),
             Self::Key(v)           => format!("@{v}"),
+            Self::Path(v)          => format!("{v}"),
+            Self::Index(v)         => format!("{v}"),
             Self::Closure(n)       => format!("#{n:?}"),
             Self::Params(params)   => format!("$({})",
             params.iter().map(|(id, typ, more)|
@@ -201,6 +334,8 @@ impl Display for Value {
             Self::String(v)        => v.to_string(),
             Self::Vector(v, _)     => format!("{v:?}"),
             Self::Key(v)           => format!("@{v}"),
+            Self::Path(v)          => format!("{v:?}"),
+            Self::Index(v)         => format!("{v:?}"),
             Self::Closure(n)       => format!("#{n}"),
             Self::Params(params)   => format!("$({})",
             params.iter().map(|(id, typ, more)|
@@ -218,7 +353,8 @@ pub enum Type {
     Any,
     Int, Float, Char, Bool,
     String, Vector(Option<Box<Type>>),
-    Key, Closure, Params,
+    Key, Path, Index,
+    Closure, Params,
     Function(Vec<Type>, Option<Box<Type>>), NativFunction(Vec<Type>, Option<Box<Type>>), Object,
     Type
 }
@@ -233,6 +369,8 @@ impl Debug for Type {
             Self::String              => "str".to_string(),
             Self::Vector(t)           => if let Some(t) = t { format!("vec<{t:?}>") } else { format!("vec") }
             Self::Key                 => "key".to_string(),
+            Self::Path                => "path".to_string(),
+            Self::Index               => "index".to_string(),
             Self::Closure             => "closure".to_string(),
             Self::Params              => "params".to_string(),
             Self::Function(p, r)      => format!("fn({p:?})"),
@@ -253,6 +391,8 @@ impl Display for Type {
             Self::String              => "str".to_string(),
             Self::Vector(t)           => if let Some(t) = t { format!("vec<{t}>") } else { format!("vec") }
             Self::Key                 => "key".to_string(),
+            Self::Path                => "path".to_string(),
+            Self::Index               => "index".to_string(),
             Self::Closure             => "closure".to_string(),
             Self::Params              => "params".to_string(),
             Self::Function(t, _)      => format!("fn({})", t.iter().map(|x| x.to_string()).collect::<Vec<String>>().join(" ")),
@@ -288,6 +428,8 @@ impl PartialEq for Type {
                 None => true
             }
             (Self::Key, Self::Key)          => true,
+            (Self::Path, Self::Path)        => true,
+            (Self::Index, Self::Index)      => true,
             (Self::Closure, Self::Closure)  => true,
             (Self::Params, Self::Params)    => true,
             (Self::Function(p1, t1), Self::Function(p2, t2)) => p1 == p2 && t1 == t2,

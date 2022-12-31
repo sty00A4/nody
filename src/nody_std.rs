@@ -55,6 +55,29 @@ fn _set(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
         Ok((None, Return::None))
     } else { panic!("type checking doesn't work") }
 }
+// DONT KNOW HOW TO FIX THAT YET
+// fn _set_path(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
+//     let mut path = context.get_var_mut(&":path".to_string()).unwrap();
+//     let v = context.get_var(&":v".to_string()).unwrap().clone();
+//     if let Value::Path(path) = path {
+//         if path.get(context)?.is_none() { return Err(Error::NotDefinedPath(path.clone())) }
+//         if !path.is_mutable(context)?.unwrap() { return Err(Error::ImmutablePath(path.clone())) }
+//         let mut value = path.get_mut(context)?.unwrap();
+//         *value = v;
+//         Ok((None, Return::None))
+//     } else { panic!("type checking doesn't work") }
+// }
+// fn _set_index(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
+//     let mut index = context.get_var_mut(&":index".to_string()).unwrap();
+//     let v = context.get_var(&":v".to_string()).unwrap().clone();
+//     if let Value::Index(index) = index {
+//         if index.get(context)?.is_none() { return Err(Error::NotDefinedIndex(index.clone())) }
+//         if !index.is_mutable(context)?.unwrap() { return Err(Error::ImmutableIndex(index.clone())) }
+//         let mut value = index.get_mut(context)?.unwrap();
+//         *value = v;
+//         Ok((None, Return::None))
+//     } else { panic!("type checking doesn't work") }
+// }
 fn _get(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
     let id = context.get_var(&":id".to_string()).unwrap().clone();
     if let Value::Key(id) = id {
@@ -64,10 +87,40 @@ fn _get(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
         }
     } else { panic!("type checking doesn't work") }
 }
+fn _get_path(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
+    let path = context.get_var(&":path".to_string()).unwrap().clone();
+    if let Value::Path(path) = path {
+        match path.get(context)? {
+            Some(value) => Ok((Some(value.clone()), Return::None)),
+            None => Err(Error::NotDefinedPath(path))
+        }
+    } else { panic!("type checking doesn't work") }
+}
+fn _get_index(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
+    let index = context.get_var(&":index".to_string()).unwrap().clone();
+    if let Value::Index(index) = index {
+        match index.get(context)? {
+            Some(value) => Ok((Some(value.clone()), Return::None)),
+            None => Err(Error::NotDefinedIndex(index))
+        }
+    } else { panic!("type checking doesn't work") }
+}
 fn _exist(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
-    let id = context.get_var(&":id".to_string()).unwrap().clone();
+    let id = context.get_var(&":id".to_string()).unwrap();
     if let Value::Key(id) = id {
-        Ok((Some(Value::Bool(context.get_var(&id).is_some())), Return::None))
+        Ok((Some(Value::Bool(context.get_var(id).is_some())), Return::None))
+    } else { panic!("type checking doesn't work") }
+}
+fn _exist_path(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
+    let path = context.get_var(&":path".to_string()).unwrap().clone();
+    if let Value::Path(path) = path {
+        Ok((Some(Value::Bool(path.get(context)?.is_some())), Return::None))
+    } else { panic!("type checking doesn't work") }
+}
+fn _exist_index(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
+    let index = context.get_var(&":index".to_string()).unwrap().clone();
+    if let Value::Index(index) = index {
+        Ok((Some(Value::Bool(index.get(context)?.is_some())), Return::None))
     } else { panic!("type checking doesn't work") }
 }
 fn _is_mut(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
@@ -76,6 +129,25 @@ fn _is_mut(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
         match context.is_mutable(&id) {
             Some(mutable) => Ok((Some(Value::Bool(mutable)), Return::None)),
             None => Err(Error::NotDefined(id))
+        }
+    } else { panic!("type checking doesn't work") }
+}
+fn _is_mut_path(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
+    let path = context.get_var(&":path".to_string()).unwrap().clone();
+    if let Value::Path(path) = path {
+        match path.is_mutable(context)? {
+            Some(mutable) => Ok((Some(Value::Bool(mutable)), Return::None)),
+            None => Err(Error::NotDefinedPath(path))
+        }
+    } else { panic!("type checking doesn't work") }
+}
+fn _is_mut_index(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
+    let index = context.get_var(&":index".to_string()).unwrap().clone();
+    let pos = context.get_var_pos(&":index".to_string()).unwrap().clone();
+    if let Value::Index(index) = index {
+        match index.is_mutable(context)? {
+            Some(mutable) => Ok((Some(Value::Bool(mutable)), Return::None)),
+            None => Err(Error::NotDefinedIndex(index))
         }
     } else { panic!("type checking doesn't work") }
 }
@@ -743,6 +815,86 @@ fn _str(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
 fn _key(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
     Ok((Some(Value::Key(context.get_var(&"v".to_string()).unwrap().to_string())), Return::None))
 }
+// path
+fn _path(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
+    let p = context.get_var(&"p".to_string()).unwrap().clone();
+    if let Value::Vector(keys, Some(Type::Key)) = p {
+        let mut path = vec![];
+        for key in keys {
+            if let Value::Key(key) = key {
+                path.push(key);
+            } else { panic!("type checking doesn't work") }
+        }
+        Ok((Some(Value::Path(Path::new(path))), Return::None))
+    } else { panic!("type checking doesn't work") }
+}
+fn _path_str(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
+    let p = context.get_var(&"p".to_string()).unwrap().clone();
+    if let Value::Vector(strings, Some(Type::String)) = p {
+        let mut path = vec![];
+        for string in strings {
+            if let Value::String(string) = string {
+                path.push(string);
+            } else { panic!("type checking doesn't work") }
+        }
+        Ok((Some(Value::Path(Path::new(path))), Return::None))
+    } else { panic!("type checking doesn't work") }
+}
+// index
+fn _index(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
+    let p = context.get_var(&"p".to_string()).unwrap().clone();
+    let idx = context.get_var(&"idx".to_string()).unwrap().clone();
+    if let Value::Int(idx) = idx {
+        if let Value::Path(path) = p {
+            if idx < 0 { return Err(Error::IllegalNegativeIndex(idx)) }
+            let idx = idx as usize;
+            Ok((Some(Value::Index(Index::new(PathWays::Path(path), idx))), Return::None))
+        } else { panic!("type checking doesn't work") }
+    } else { panic!("type checking doesn't work") }
+}
+fn _index_index(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
+    let index = context.get_var(&"i".to_string()).unwrap().clone();
+    let idx = context.get_var(&"idx".to_string()).unwrap().clone();
+    if let Value::Int(idx) = idx {
+        if let Value::Index(index) = index {
+            if idx < 0 { return Err(Error::IllegalNegativeIndex(idx)) }
+            let idx = idx as usize;
+            Ok((Some(Value::Index(Index::new(PathWays::Index(Box::new(index)), idx))), Return::None))
+        } else { panic!("type checking doesn't work") }
+    } else { panic!("type checking doesn't work") }
+}
+fn _index_keys(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
+    let idx = context.get_var(&"idx".to_string()).unwrap().clone();
+    let path = if let Value::Vector(keys, Some(Type::Key)) = context.get_var(&"ks".to_string()).unwrap().clone() {
+        let mut path = vec![];
+        for key in keys {
+            if let Value::Key(key) = key {
+                path.push(key);
+            } else { panic!("type checking doesn't work") }
+        }
+        Value::Path(Path::new(path))
+    } else { panic!("type checking doesn't work") };
+    if let Value::Int(idx) = idx {
+        if let Value::Path(path) = path {
+            if idx < 0 { return Err(Error::IllegalNegativeIndex(idx)) }
+            let idx = idx as usize;
+            Ok((Some(Value::Index(Index::new(PathWays::Path(path), idx))), Return::None))
+        } else { panic!("type checking doesn't work") }
+    } else { panic!("type checking doesn't work") }
+}
+fn _index_key(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
+    let idx = context.get_var(&"idx".to_string()).unwrap().clone();
+    let path = if let Value::Key(key) = context.get_var(&"k".to_string()).unwrap().clone() {
+        Value::Path(Path::new(vec![key]))
+    } else { panic!("type checking doesn't work") };
+    if let Value::Int(idx) = idx {
+        if let Value::Path(path) = path {
+            if idx < 0 { return Err(Error::IllegalNegativeIndex(idx)) }
+            let idx = idx as usize;
+            Ok((Some(Value::Index(Index::new(PathWays::Path(path), idx))), Return::None))
+        } else { panic!("type checking doesn't work") }
+    } else { panic!("type checking doesn't work") }
+}
 // vec
 fn _vec(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
     let t = context.get_var(&"t".to_string()).unwrap();
@@ -944,10 +1096,35 @@ pub fn std_context() -> Result<Context, Error> {
         body: _set,
         inline: true
     }, pos.clone())?;
+    // SEE _set_path and _set_index in comments above
+    // context.create_native_fn(String::from("set"), NativFunction {
+    //     params: vec![(":path".to_string(), Type::Index, false), (":v".to_string(), Type::Any, false)],
+    //     return_type: None,
+    //     body: _set_path,
+    //     inline: true
+    // }, pos.clone())?;
+    // context.create_native_fn(String::from("set"), NativFunction {
+    //     params: vec![(":index".to_string(), Type::Index, false), (":v".to_string(), Type::Any, false)],
+    //     return_type: None,
+    //     body: _set_index,
+    //     inline: true
+    // }, pos.clone())?;
     context.create_native_fn(String::from("get"), NativFunction {
         params: vec![(":id".to_string(), Type::Key, false)],
         return_type: Some(Type::Any),
         body: _get,
+        inline: true
+    }, pos.clone())?;
+    context.create_native_fn(String::from("get"), NativFunction {
+        params: vec![(":path".to_string(), Type::Path, false)],
+        return_type: Some(Type::Any),
+        body: _get_path,
+        inline: true
+    }, pos.clone())?;
+    context.create_native_fn(String::from("get"), NativFunction {
+        params: vec![(":index".to_string(), Type::Index, false)],
+        return_type: Some(Type::Any),
+        body: _get_index,
         inline: true
     }, pos.clone())?;
     context.create_native_fn(String::from("exist?"), NativFunction {
@@ -956,10 +1133,34 @@ pub fn std_context() -> Result<Context, Error> {
         body: _exist,
         inline: true
     }, pos.clone())?;
+    context.create_native_fn(String::from("exist?"), NativFunction {
+        params: vec![(":path".to_string(), Type::Path, false)],
+        return_type: Some(Type::Bool),
+        body: _exist_path,
+        inline: true
+    }, pos.clone())?;
+    context.create_native_fn(String::from("exist?"), NativFunction {
+        params: vec![(":index".to_string(), Type::Index, false)],
+        return_type: Some(Type::Bool),
+        body: _exist_index,
+        inline: true
+    }, pos.clone())?;
     context.create_native_fn(String::from("mut?"), NativFunction {
         params: vec![(":id".to_string(), Type::Key, false)],
         return_type: Some(Type::Bool),
         body: _is_mut,
+        inline: true
+    }, pos.clone())?;
+    context.create_native_fn(String::from("mut?"), NativFunction {
+        params: vec![(":path".to_string(), Type::Path, false)],
+        return_type: Some(Type::Bool),
+        body: _is_mut_path,
+        inline: true
+    }, pos.clone())?;
+    context.create_native_fn(String::from("mut?"), NativFunction {
+        params: vec![(":index".to_string(), Type::Index, false)],
+        return_type: Some(Type::Bool),
+        body: _is_mut_index,
         inline: true
     }, pos.clone())?;
     // def
@@ -1402,6 +1603,56 @@ pub fn std_context() -> Result<Context, Error> {
         params: vec![("v".to_string(), Type::Any, false)],
         return_type: Some(Type::Key),
         body: _key,
+        inline: false
+    }, pos.clone())?;
+    // path
+    context.create_native_fn(String::from("path"), NativFunction {
+        params: vec![("p".to_string(), Type::Key, true)],
+        return_type: Some(Type::Path),
+        body: _path,
+        inline: false
+    }, pos.clone())?;
+    context.create_native_fn(String::from("path"), NativFunction {
+        params: vec![("p".to_string(), Type::String, true)],
+        return_type: Some(Type::Path),
+        body: _path_str,
+        inline: false
+    }, pos.clone())?;
+    context.create_native_fn(String::from("path"), NativFunction {
+        params: vec![("p".to_string(), Type::Vector(Some(Box::new(Type::Key))), false)],
+        return_type: Some(Type::Path),
+        body: _path,
+        inline: false
+    }, pos.clone())?;
+    context.create_native_fn(String::from("path"), NativFunction {
+        params: vec![("p".to_string(), Type::Vector(Some(Box::new(Type::String))), false)],
+        return_type: Some(Type::Path),
+        body: _path_str,
+        inline: false
+    }, pos.clone())?;
+    // index
+    context.create_native_fn(String::from("index"), NativFunction {
+        params: vec![("p".to_string(), Type::Path, false), ("idx".to_string(), Type::Int, false)],
+        return_type: Some(Type::Index),
+        body: _index,
+        inline: false
+    }, pos.clone())?;
+    context.create_native_fn(String::from("index"), NativFunction {
+        params: vec![("i".to_string(), Type::Index, false), ("idx".to_string(), Type::Int, false)],
+        return_type: Some(Type::Index),
+        body: _index_index,
+        inline: false
+    }, pos.clone())?;
+    context.create_native_fn(String::from("index"), NativFunction {
+        params: vec![("ks".to_string(), Type::Key, true), ("idx".to_string(), Type::Int, false)],
+        return_type: Some(Type::Index),
+        body: _index_keys,
+        inline: false
+    }, pos.clone())?;
+    context.create_native_fn(String::from("index"), NativFunction {
+        params: vec![("k".to_string(), Type::Key, false), ("idx".to_string(), Type::Int, false)],
+        return_type: Some(Type::Index),
+        body: _index_key,
         inline: false
     }, pos.clone())?;
     // vec
