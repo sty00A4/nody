@@ -143,26 +143,87 @@ impl PartialEq for NativFunction {
     }
 }
 #[derive(Clone, PartialEq)]
-pub enum PathWays { Path(Path), Index(Box<Index>) }
+pub enum PathWays { Key(String), Path(Box<Path>), Index(Box<Index>) }
+impl Debug for PathWays {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Key(key) => write!(f, "@{}", key),
+            Self::Path(path) => write!(f, "{:?}", path),
+            Self::Index(index) => write!(f, "{:?}", index),
+        }
+    }
+}
+impl Display for PathWays {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Key(key) => write!(f, "@{}", key),
+            Self::Path(path) => write!(f, "{}", path),
+            Self::Index(index) => write!(f, "{}", index),
+        }
+    }
+}
 #[derive(Clone, PartialEq)]
 pub struct Path {
-    pub path: Vec<String>
+    pub head: PathWays,
+    pub sub: String,
 }
 impl Path {
-    pub fn new(path: Vec<String>) -> Self { Self { path } }
-    pub fn get(&self, context: &mut Context) -> Result<Option<&Value>, Error> {
-        todo!("path.get(context)");
+    pub fn new(head: PathWays, sub: String) -> Self { Self { head, sub } }
+    pub fn get_head<'a>(&'a self, context: &'a mut Context) -> Result<Option<&'a Value>, Error> {
+        match &self.head {
+            PathWays::Key(key) => Ok(context.get_var(&key)),
+            PathWays::Path(path) => path.get(context),
+            PathWays::Index(index) => index.get(context)
+        }
     }
-    pub fn get_mut(&mut self, context: &mut Context) -> Result<Option<&mut Value>, Error> {
-        todo!("path.get_mut(context)")
+    pub fn get<'a>(&'a self, context: &'a mut Context) -> Result<Option<&'a Value>, Error> {
+        let sub = self.sub.clone();
+        match self.get_head(context)? {
+            Some(value) => match value {
+                Value::Object(scope) => match scope.get_var(&sub) {
+                    Some(value) => Ok(Some(value)),
+                    None => Ok(None)
+                }
+                _ => {
+                    Err(Error::ExpectedType(Type::Object, value.typ()))
+                }
+            }
+            _ => Ok(None)
+        }
+    }
+    pub fn get_head_mut<'a>(&'a mut self, context: &'a mut Context) -> Result<Option<&'a mut Value>, Error> {
+        match &mut self.head {
+            PathWays::Key(key) => Ok(context.get_var_mut(&key)),
+            PathWays::Path(path) => path.get_mut(context),
+            PathWays::Index(index) => index.get_mut(context)
+        }
+    }
+    pub fn get_mut<'a>(&'a mut self, context: &'a mut Context) -> Result<Option<&'a mut Value>, Error> {
+        let sub = self.sub.clone();
+        match self.get_head_mut(context)? {
+            Some(value) => match value {
+                Value::Object(scope) => match scope.get_var_mut(&sub) {
+                    Some(value) => Ok(Some(value)),
+                    None => Ok(None)
+                }
+                _ => {
+                    Err(Error::ExpectedType(Type::Object, value.typ()))
+                }
+            }
+            _ => Ok(None)
+        }
     }
     pub fn is_mutable(&self, context: &mut Context) -> Result<Option<bool>, Error> {
-        todo!("path.is_mutable(context)")
+        match &self.head {
+            PathWays::Key(key) => Ok(context.is_mutable(key)),
+            PathWays::Path(path) => path.is_mutable(context),
+            PathWays::Index(index) => index.is_mutable(context)
+        }
     }
 }
 impl Debug for Path {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "@{}", self.path.join("@"))
+        write!(f, "{}@{}", self.head, self.sub)
     }
 }
 impl Display for Path {
@@ -172,83 +233,68 @@ impl Display for Path {
 }
 #[derive(Clone, PartialEq)]
 pub struct Index {
-    pub path: PathWays,
+    pub head: PathWays,
     pub idx: usize
 }
 impl Index {
-    pub fn new(path: PathWays, idx: usize) -> Self { Self { path, idx } }
-    pub fn get(&self, context: &mut Context) -> Result<Option<&Value>, Error> {
-        match &self.path {
-            PathWays::Path(path) => match path.get(context)? {
-                Some(value) => match value {
-                    Value::Vector(values, _) => match values.get(values.len() - self.idx) {
-                        Some(value) => Ok(Some(value)),
-                        None => {
-                            Err(Error::IndexOutOfRange(values.len() - self.idx, values.len()))
-                        }
-                    }
-                    _ => {
-                        Err(Error::ExpectedType(Type::Vector(None), value.typ()))
-                    }
-                }
-                _ => Ok(None)
-            }
-            PathWays::Index(index) => match index.get(context)? {
-                Some(value) => match value {
-                    Value::Vector(values, _) => match values.get(values.len() - self.idx) {
-                        Some(value) => Ok(Some(value)),
-                        None => {
-                            Err(Error::IndexOutOfRange(values.len() - self.idx, values.len()))
-                        }
-                    }
-                    _ => {
-                        Err(Error::ExpectedType(Type::Vector(None), value.typ()))
-                    }
-                }
-                _ => Ok(None)
-            }
+    pub fn new(head: PathWays, idx: usize) -> Self { Self { head, idx } }
+    pub fn get_head<'a>(&'a self, context: &'a mut Context) -> Result<Option<&'a Value>, Error> {
+        match &self.head {
+            PathWays::Key(key) => Ok(context.get_var(&key)),
+            PathWays::Path(path) => path.get(context),
+            PathWays::Index(index) => index.get(context)
         }
     }
-    pub fn get_mut(&mut self, context: &mut Context) -> Result<Option<&mut Value>, Error> {
-        match &mut self.path {
-            PathWays::Path(path) => match path.get_mut(context)? {
-                Some(value) =>  match value {
-                    Value::Vector(values, _) => {
-                        let len = values.len();
-                        match values.get_mut(len - self.idx) {
-                            Some(value) => Ok(Some(value)),
-                            None => {
-                                Err(Error::IndexOutOfRange(len - self.idx, len))
-                            }
+    pub fn get<'a>(&'a self, context: &'a mut Context) -> Result<Option<&'a Value>, Error> {
+        let idx = self.idx;
+        match self.get_head(context)? {
+            Some(value) =>  match value {
+                Value::Vector(values, _) => {
+                    let len = values.len();
+                    match values.get(idx) {
+                        Some(value) => Ok(Some(value)),
+                        None => {
+                            Err(Error::IndexOutOfRange(idx, len))
                         }
                     }
-                    _ => {
-                        Err(Error::ExpectedType(Type::Vector(None), value.typ()))
-                    }
                 }
-                _ => Ok(None)
+                _ => {
+                    Err(Error::ExpectedType(Type::Vector(None), value.typ()))
+                }
             }
-            PathWays::Index(index) => match index.get_mut(context)? {
-                Some(value) => match value {
-                    Value::Vector(values, _) => {
-                        let len = values.len();
-                        match values.get_mut(len - self.idx) {
-                            Some(value) => Ok(Some(value)),
-                            None => {
-                                Err(Error::IndexOutOfRange(len - self.idx, len))
-                            }
+            _ => Ok(None)
+        }
+    }
+    pub fn get_head_mut<'a>(&'a mut self, context: &'a mut Context) -> Result<Option<&'a mut Value>, Error> {
+        match &mut self.head {
+            PathWays::Key(key) => Ok(context.get_var_mut(&key)),
+            PathWays::Path(path) => path.get_mut(context),
+            PathWays::Index(index) => index.get_mut(context)
+        }
+    }
+    pub fn get_mut<'a>(&'a mut self, context: &'a mut Context) -> Result<Option<&'a mut Value>, Error> {
+        let idx = self.idx;
+        match self.get_head_mut(context)? {
+            Some(value) =>  match value {
+                Value::Vector(values, _) => {
+                    let len = values.len();
+                    match values.get_mut(idx) {
+                        Some(value) => Ok(Some(value)),
+                        None => {
+                            Err(Error::IndexOutOfRange(idx, len))
                         }
                     }
-                    _ => {
-                        Err(Error::ExpectedType(Type::Vector(None), value.typ()))
-                    }
                 }
-                _ => Ok(None)
+                _ => {
+                    Err(Error::ExpectedType(Type::Vector(None), value.typ()))
+                }
             }
+            _ => Ok(None)
         }
     }
     pub fn is_mutable(&self, context: &mut Context) -> Result<Option<bool>, Error> {
-        match &self.path {
+        match &self.head {
+            PathWays::Key(key) => Ok(context.is_mutable(key)),
             PathWays::Path(path) => path.is_mutable(context),
             PathWays::Index(index) => index.is_mutable(context)
         }
@@ -256,18 +302,12 @@ impl Index {
 }
 impl Debug for Index {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match &self.path {
-            PathWays::Path(path) => write!(f, "{:?}[{:?}]", path, self.idx),
-            PathWays::Index(index) => write!(f, "{:?}[{:?}]", index, self.idx)
-        }
+        write!(f, "{:?}[{:?}]", self.head, self.idx)
     }
 }
 impl Display for Index {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match &self.path {
-            PathWays::Path(path) => write!(f, "{}[{}]", path, self.idx),
-            PathWays::Index(index) => write!(f, "{}[{}]", index, self.idx)
-        }
+        write!(f, "{}[{}]", self.head, self.idx)
     }
 }
 #[derive(Clone, PartialEq)]
