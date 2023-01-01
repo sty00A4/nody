@@ -3,7 +3,7 @@ use crate::*;
 pub const WS: [char; 4] = [' ', '\r', '\t', '\n'];
 pub const SYMBOLS: [char; 12] = [';', '(', ')', '[', ']', '{', '}', '@', '#', '$', '"', '\''];
 pub type NodeRef = Box<Node>;
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub enum Node {
     None { pos: Position },
     Int { v: i64, pos: Position }, Float{ v: f64, pos: Position }, Char { v: char, pos: Position },
@@ -31,6 +31,29 @@ impl Node {
             Node::Vector { nodes:_, pos }       => pos,
             Node::Closure { node:_, pos }       => pos,
             Node::Params { params:_, pos }      => pos
+        }
+    }
+}
+impl Debug for Node {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Node::None { pos:_ }              => write!(f, "()"),
+            Node::Int { v, pos:_ }            => write!(f, "{v:?}"),
+            Node::Float { v, pos:_ }          => write!(f, "{v:?}"),
+            Node::Char { v, pos:_ }           => write!(f, "'{v}"),
+            Node::Bool { v, pos:_ }           => write!(f, "{v:?}"),
+            Node::String { v, pos:_ }         => write!(f, "{v:?}"),
+            Node::Type { v, pos:_ }           => write!(f, "{v:?}"),
+            Node::Word { v, pos:_ }           => write!(f, "{v}"),
+            Node::Key { v, pos:_ }            => write!(f, "@{v}"),
+            Node::Node { head, args, pos:_ }  => write!(f, "({head} {})", args.iter().map(|x| x.to_string()).collect::<Vec<String>>().join(" ")),
+            Node::Body { nodes, pos:_ }       => write!(f, "{{{}}}", nodes.iter().map(|x| x.to_string()).collect::<Vec<String>>().join(" ")),
+            Node::Vector { nodes, pos:_ }     => write!(f, "[{}]", nodes.iter().map(|x| x.to_string()).collect::<Vec<String>>().join(" ")),
+            Node::Closure { node, pos:_ }     => write!(f, "#{node}"),
+            Node::Params { params, pos:_ }    => write!(f, "$({})",
+            params.iter().map(|(id, typ, more)|
+                format!("{} {}{}", id, typ, if *more { "*" } else { "" }))
+            .collect::<Vec<String>>().join(" ")),
         }
     }
 }
