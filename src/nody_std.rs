@@ -51,19 +51,21 @@ fn _set(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
     if let Value::Key(id) = id {
         if context.get_var(&id).is_none() { return Err(Error::NotDefined(id)) }
         if !context.is_mutable(&id).unwrap() { return Err(Error::Immutable(id)) }
-        context.change(id, v);
+        context.change(id, v)?;
         Ok((None, Return::None))
     } else { panic!("type checking doesn't work") }
 }
-// DONT KNOW HOW TO FIX THAT YET
 fn _set_path(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
     let v = context.get_var(&":v".to_string()).unwrap().clone();
+    context.trace_push(&context.get_var_pos(&":v".to_string()).unwrap().clone());
     let mut path = context.get_var_mut(&":path".to_string()).unwrap().clone();
     if let Value::Path(path) = &mut path {
         let mutable = path.is_mutable(context)?.unwrap();
         match path.get_mut(context)? {
             Some(value) => if mutable {
+                if v.typ() != value.typ() { return Err(Error::ExpectedType(value.typ(), v.typ())) }
                 *value = v;
+                context.trace_pop();
                 Ok((None, Return::None))
             } else {
                 Err(Error::ImmutablePath(path.clone()))
@@ -74,12 +76,17 @@ fn _set_path(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
 }
 fn _set_index(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
     let v = context.get_var(&":v".to_string()).unwrap().clone();
+    context.trace_push(&context.get_var_pos(&":v".to_string()).unwrap().clone());
     let mut index = context.get_var_mut(&":index".to_string()).unwrap().clone();
     if let Value::Index(index) = &mut index {
         let mutable = index.is_mutable(context)?.unwrap();
         match index.get_mut(context)? {
             Some(value) => if mutable {
+                if v.typ() != value.typ() {
+                    return Err(Error::ExpectedType(value.typ(), v.typ()))
+                }
                 *value = v;
+                context.trace_pop();
                 Ok((None, Return::None))
             } else {
                 Err(Error::ImmutableIndex(index.clone()))

@@ -96,19 +96,33 @@ pub fn interpret(node: &Node, context: &mut Context) -> Result<(Option<Value>, R
                     Some(func) => {
                         let mut func_context = Context::call(context, func.inline);
                         func_context.create_params(&func.params, values, poses, func.inline)?;
-                        let res = (func.body)(&mut func_context)?;
-                        context.after_call(func_context, func.inline);
-                        context.pop();
-                        return Ok(res)
+                        match (func.body)(&mut func_context) {
+                            Ok(res) => {
+                                context.after_call(func_context, func.inline);
+                                context.pop();
+                                return Ok(res)
+                            }
+                            Err(e) => {
+                                context.after_call(func_context, func.inline);
+                                return Err(e)
+                            }
+                        }
                     }
                     None => match context.get_fn(v, &types) {
                         Some(func) => {
                             let mut func_context = Context::call(context, func.inline);
                             func_context.create_params(&func.params, values, poses, func.inline)?;
-                            let res = interpret(&func.body, &mut func_context)?;
-                            context.after_call(func_context, func.inline);
-                            context.pop();
-                            return Ok(res)
+                            match interpret(&func.body, &mut func_context) {
+                                Ok(res) => {
+                                    context.after_call(func_context, func.inline);
+                                    context.pop();
+                                    return Ok(res)
+                                }
+                                Err(e) => {
+                                    context.after_call(func_context, func.inline);
+                                    return Err(e)
+                                }
+                            }
                         }
                         None => match context.get_var(v) {
                             Some(_) => {}
@@ -220,18 +234,32 @@ pub fn interpret(node: &Node, context: &mut Context) -> Result<(Option<Value>, R
                     Value::Function(func) => {
                         let mut func_context = Context::call(context, func.inline);
                         func_context.create_params(&func.params, values, poses, func.inline)?;
-                        let res = interpret(&func.body, &mut func_context)?;
-                        context.after_call(func_context, func.inline);
-                        context.pop();
-                        Ok(res)
+                        match interpret(&func.body, &mut func_context) {
+                            Ok(res) => {
+                                context.after_call(func_context, func.inline);
+                                context.pop();
+                                Ok(res)
+                            }
+                            Err(e) => {
+                                context.after_call(func_context, func.inline);
+                                Err(e)
+                            }
+                        }
                     }
                     Value::NativFunction(func) => {
                         let mut func_context = Context::call(context, func.inline);
                         func_context.create_params(&func.params, values, poses, func.inline)?;
-                        let res = (func.body)(&mut func_context)?;
-                        context.after_call(func_context, func.inline);
-                        context.pop();
-                        Ok(res)
+                        match (func.body)(&mut func_context) {
+                            Ok(res) => {
+                                context.after_call(func_context, func.inline);
+                                context.pop();
+                                return Ok(res)
+                            }
+                            Err(e) => {
+                                context.after_call(func_context, func.inline);
+                                return Err(e)
+                            }
+                        }
                     }
                     _ => {
                         context.trace_push(head.pos());
