@@ -9,6 +9,15 @@ impl Position {
     }
 }
 
+pub fn argument_display(pattern: &Vec<Type>) -> String {
+    pattern.iter().map(|typ| typ.to_string()).collect::<Vec<String>>().join(" ")
+}
+pub fn pattern_display(pattern: &Vec<(Type, bool)>) -> String {
+    pattern.iter().map(|(typ, more)| format!("{typ}{}", if *more { "*" } else { "" })).collect::<Vec<String>>().join(" ")
+}
+pub fn patterns_display(patterns: &Vec<Vec<(Type, bool)>>) -> String {
+    patterns.iter().map(|pattern| format!("({})", pattern_display(pattern))).collect::<Vec<String>>().join("\n")
+}
 #[derive(Debug, Clone)]
 pub enum Error {
     TargetFileNotFound(String),
@@ -19,7 +28,7 @@ pub enum Error {
     NotDefined(String), AlreadyDefined(String), Immutable(String),
     NotDefinedPath(Path), ImmutablePath(Path), NotDefinedIndex(Index), ImmutableIndex(Index),
     Expected, ExpectedArg, ExpectedType(Type, Type), ExpectedTypes(Vec<Type>, Type),
-    FunctionPatternNotFound(String, Vec<Type>), ValuePatternNotFound(Type, Vec<Type>),
+    FunctionPatternNotFound(String, Vec<Type>, Vec<Vec<(Type, bool)>>), ValuePatternNotFound(Type, Vec<Type>),
     InvalidHeadValue(Value), InvalidHeadCastType(Type), InvalidCastBetween(Type, Type),
     IndexOutOfRange(usize, usize), IllegalNegativeIndex(i64)
 }
@@ -52,10 +61,10 @@ impl Display for Error {
             Self::ExpectedType(t1, t2) => write!(f, "ERROR: expected {t1}, got {t2}"),
             Self::ExpectedTypes(t, t2) => write!(f, "ERROR: expected {}, got {t2}",
             t.iter().map(|x| x.to_string()).collect::<Vec<String>>().join("|")),
-            Self::FunctionPatternNotFound(id, types) => write!(f, "ERROR: no function {id:?} found with pattern ({})",
-            types.iter().map(|x| x.to_string()).collect::<Vec<String>>().join(", ")),
-            Self::ValuePatternNotFound(typ, types) => write!(f, "ERROR: no value function of type {typ} found with pattern ({})",
-            types.iter().map(|x| x.to_string()).collect::<Vec<String>>().join(", ")),
+            Self::FunctionPatternNotFound(id, args, patterns) => write!(f, "ERROR: no function {id:?} found with pattern ({})\nvalid patterns would be:\n{}",
+            argument_display(args), patterns_display(patterns)),
+            Self::ValuePatternNotFound(typ, args) => write!(f, "ERROR: no value function of type {typ} found with pattern ({})",
+            argument_display(args)),
             Self::InvalidHeadValue(v) => write!(f, "ERROR: unexpected {} value for head", v.typ()),
             Self::InvalidHeadCastType(t) => write!(f, "ERROR: invalid cast type {t}"),
             Self::InvalidCastBetween(t1, t2) => write!(f, "ERROR: invalid cast from {t2} to {t1}"),

@@ -133,6 +133,12 @@ impl Scope {
             None => None
         }
     }
+    pub fn get_fn_any(&self, id: &String) -> Option<&Vec<(Function, Position)>> {
+        self.funcs.get(id)
+    }
+    pub fn get_fn_any_mut(&mut self, id: &String) -> Option<&mut Vec<(Function, Position)>> {
+        self.funcs.get_mut(id)
+    }
     pub fn get_fn_first(&self, id: &String) -> Option<&Function> {
         match self.funcs.get(id) {
             Some(defs) => Some(&defs.first().unwrap().0),
@@ -199,6 +205,12 @@ impl Scope {
             None => None
         }
     }
+    pub fn get_native_fn_any(&self, id: &String) -> Option<&Vec<(NativFunction, Position)>> {
+        self.native_funcs.get(id)
+    }
+    pub fn get_native_fn_any_mut(&mut self, id: &String) -> Option<&mut Vec<(NativFunction, Position)>> {
+        self.native_funcs.get_mut(id)
+    }
     pub fn get_native_fn_first(&self, id: &String) -> Option<&NativFunction> {
         match self.native_funcs.get(id) {
             Some(defs) => Some(&defs.first().unwrap().0),
@@ -213,6 +225,25 @@ impl Scope {
     }
     pub fn native_fn_exists(&self, id: &String) -> bool {
         self.native_funcs.contains_key(id)
+    }
+    // get patterns
+    pub fn get_patterns(&self, id: &String) -> Option<Vec<Vec<(Type, bool)>>> {
+        let mut patterns: Vec<Vec<(Type, bool)>> = vec![];
+        match self.funcs.get(id) {
+            Some(defs) => {
+                for (func, _) in defs {
+                    patterns.push(func.get_pattern())
+                }
+                Some(patterns)
+            }
+            None => {
+                let defs = self.native_funcs.get(id)?;
+                for (func, _) in defs {
+                    patterns.push(func.get_pattern())
+                }
+                Some(patterns)
+            }
+        }
     }
 }
 impl PartialEq for Scope {
@@ -272,6 +303,21 @@ impl Context {
         if self.global.get_fn_mut(id, pattern).is_some() { return Some(&mut self.global) }
         None
     }
+    // scope of fn
+    pub fn get_scope_fn_any(&self, id: &String) -> Option<&Scope> {
+        for scope in self.scopes.iter().rev() {
+            if scope.get_fn_any(id).is_some() { return Some(scope) }
+        }
+        if self.global.get_fn_any(id).is_some() { return Some(&self.global) }
+        None
+    }
+    pub fn get_scope_fn_any_mut(&mut self, id: &String) -> Option<&mut Scope> {
+        for scope in self.scopes.iter_mut().rev() {
+            if scope.get_fn_any_mut(id).is_some() { return Some(scope) }
+        }
+        if self.global.get_fn_any_mut(id).is_some() { return Some(&mut self.global) }
+        None
+    }
     // scope of fn params
     pub fn get_scope_fn_params(&self, id: &String, params: &Params) -> Option<&Scope> {
         for scope in self.scopes.iter().rev() {
@@ -302,7 +348,22 @@ impl Context {
         if self.global.get_native_fn_mut(id, pattern).is_some() { return Some(&mut self.global) }
         None
     }
-    
+    // scope of fn
+    pub fn get_scope_native_fn_any(&self, id: &String) -> Option<&Scope> {
+        for scope in self.scopes.iter().rev() {
+            if scope.get_native_fn_any(id).is_some() { return Some(scope) }
+        }
+        if self.global.get_native_fn_any(id).is_some() { return Some(&self.global) }
+        None
+    }
+    pub fn get_scope_native_fn_any_mut(&mut self, id: &String) -> Option<&mut Scope> {
+        for scope in self.scopes.iter_mut().rev() {
+            if scope.get_native_fn_any_mut(id).is_some() { return Some(scope) }
+        }
+        if self.global.get_native_fn_any_mut(id).is_some() { return Some(&mut self.global) }
+        None
+    }
+
     // create
     pub fn create_var(&mut self, id: String, value: Value, mutable: bool, pos: Position, overwrite: bool) -> Result<(), Error> {
         match self.get_scope_var_mut(&id) {
@@ -428,5 +489,15 @@ impl Context {
             if scope.native_fn_exists(id) { return true }
         }
         self.global.native_fn_exists(id)
+    }
+    // get patterns
+    pub fn get_patterns(&self, id: &String) -> Option<Vec<Vec<(Type, bool)>>> {
+        match self.get_scope_fn_any(id) {
+            Some(scope) => scope.get_patterns(id),
+            None => match self.get_scope_native_fn_any(id) {
+                Some(scope) => scope.get_patterns(id),
+                None => None
+            }
+        }
     }
 }

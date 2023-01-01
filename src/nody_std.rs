@@ -1626,7 +1626,7 @@ pub fn std_context() -> Result<Context, Error> {
         inline: false
     }, pos.clone())?;
     context.create_native_fn(String::from("index"), NativFunction {
-        params: vec![("head".to_string(), Type::Index, true), ("idx".to_string(), Type::Int, false)],
+        params: vec![("head".to_string(), Type::Index, false), ("idx".to_string(), Type::Int, false)],
         return_type: Some(Type::Index),
         body: _index_index,
         inline: false

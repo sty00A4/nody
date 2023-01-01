@@ -12,13 +12,16 @@ impl Function {
     pub fn new(params: Params, return_type: Option<Type>, body: NodeRef, inline: bool) -> Self {
         Self { params, return_type, body, inline }
     }
-    /// return the params as a type vector
     pub fn type_params(&self) -> Vec<Type> {
         let mut types: Vec<Type> = vec![];
         for (_, typ, more) in self.params.iter() { types.push(typ.clone()); }
         types
     }
-    /// box the return type
+    pub fn get_pattern(&self) -> Vec<(Type, bool)> {
+        let mut types: Vec<(Type, bool)> = vec![];
+        for (_, typ, more) in self.params.iter() { types.push((typ.clone(), *more)); }
+        types
+    }
     pub fn return_type_boxed(&self) -> Option<Box<Type>> {
         if let Some(t) = &self.return_type { Some(Box::new(t.clone())) } else { None }
     }
@@ -88,6 +91,11 @@ impl NativFunction {
     pub fn type_params(&self) -> Vec<Type> {
         let mut types: Vec<Type> = vec![];
         for (_, typ, _) in self.params.iter() { types.push(typ.clone()); }
+        types
+    }
+    pub fn get_pattern(&self) -> Vec<(Type, bool)> {
+        let mut types: Vec<(Type, bool)> = vec![];
+        for (_, typ, more) in self.params.iter() { types.push((typ.clone(), *more)); }
         types
     }
     pub fn return_type_boxed(&self) -> Option<Box<Type>> {

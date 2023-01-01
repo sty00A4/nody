@@ -114,7 +114,7 @@ pub fn interpret(node: &Node, context: &mut Context) -> Result<(Option<Value>, R
                             Some(_) => {}
                             None => if context.fn_exists(v) || context.native_fn_exists(v) {
                                 context.trace_push(word_pos);
-                                return Err(Error::FunctionPatternNotFound(v.clone(), types))
+                                return Err(Error::FunctionPatternNotFound(v.clone(), types, context.get_patterns(v).unwrap()))
                             } else {
                                 context.trace_push(word_pos);
                                 return Err(Error::NotDefined(v.clone()))
