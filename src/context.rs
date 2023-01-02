@@ -275,92 +275,92 @@ impl Context {
     pub fn trace_pop(&mut self) -> Option<Position> { self.trace.pop() }
     // scope of var
     pub fn get_scope_var(&self, id: &String) -> Option<&Scope> {
+        if self.global.get_var(id).is_some() { return Some(&self.global) }
         for scope in self.scopes.iter().rev() {
             if scope.get_var(id).is_some() { return Some(scope) }
         }
-        if self.global.get_var(id).is_some() { return Some(&self.global) }
         None
     }
     pub fn get_scope_var_mut(&mut self, id: &String) -> Option<&mut Scope> {
+        if self.global.get_var(id).is_some() { return Some(&mut self.global) }
         for scope in self.scopes.iter_mut().rev() {
             if scope.get_var(id).is_some() { return Some(scope) }
         }
-        if self.global.get_var(id).is_some() { return Some(&mut self.global) }
         None
     }
     // scope of fn
     pub fn get_scope_fn(&self, id: &String, pattern: &Vec<Type>) -> Option<&Scope> {
+        if self.global.get_fn(id, pattern).is_some() { return Some(&self.global) }
         for scope in self.scopes.iter().rev() {
             if scope.get_fn(id, pattern).is_some() { return Some(scope) }
         }
-        if self.global.get_fn(id, pattern).is_some() { return Some(&self.global) }
         None
     }
     pub fn get_scope_fn_mut(&mut self, id: &String, pattern: &Vec<Type>) -> Option<&mut Scope> {
+        if self.global.get_fn_mut(id, pattern).is_some() { return Some(&mut self.global) }
         for scope in self.scopes.iter_mut().rev() {
             if scope.get_fn_mut(id, pattern).is_some() { return Some(scope) }
         }
-        if self.global.get_fn_mut(id, pattern).is_some() { return Some(&mut self.global) }
         None
     }
     // scope of fn
     pub fn get_scope_fn_any(&self, id: &String) -> Option<&Scope> {
+        if self.global.get_fn_any(id).is_some() { return Some(&self.global) }
         for scope in self.scopes.iter().rev() {
             if scope.get_fn_any(id).is_some() { return Some(scope) }
         }
-        if self.global.get_fn_any(id).is_some() { return Some(&self.global) }
         None
     }
     pub fn get_scope_fn_any_mut(&mut self, id: &String) -> Option<&mut Scope> {
+        if self.global.get_fn_any_mut(id).is_some() { return Some(&mut self.global) }
         for scope in self.scopes.iter_mut().rev() {
             if scope.get_fn_any_mut(id).is_some() { return Some(scope) }
         }
-        if self.global.get_fn_any_mut(id).is_some() { return Some(&mut self.global) }
         None
     }
     // scope of fn params
     pub fn get_scope_fn_params(&self, id: &String, params: &Params) -> Option<&Scope> {
+        if self.global.get_fn_params(id, params).is_some() { return Some(&self.global) }
         for scope in self.scopes.iter().rev() {
             if scope.get_fn_params(id, params).is_some() { return Some(scope) }
         }
-        if self.global.get_fn_params(id, params).is_some() { return Some(&self.global) }
         None
     }
     pub fn get_scope_fn_params_mut(&mut self, id: &String, params: &Params) -> Option<&mut Scope> {
+        if self.global.get_fn_params_mut(id, params).is_some() { return Some(&mut self.global) }
         for scope in self.scopes.iter_mut().rev() {
             if scope.get_fn_params_mut(id, params).is_some() { return Some(scope) }
         }
-        if self.global.get_fn_params_mut(id, params).is_some() { return Some(&mut self.global) }
         None
     }
     // scope of native fn
     pub fn get_scope_native_fn(&self, id: &String, pattern: &Vec<Type>) -> Option<&Scope> {
+        if self.global.get_native_fn(id, pattern).is_some() { return Some(&self.global) }
         for scope in self.scopes.iter().rev() {
             if scope.get_native_fn(id, pattern).is_some() { return Some(scope) }
         }
-        if self.global.get_native_fn(id, pattern).is_some() { return Some(&self.global) }
         None
     }
     pub fn get_scope_native_fn_mut(&mut self, id: &String, pattern: &Vec<Type>) -> Option<&mut Scope> {
+        if self.global.get_native_fn_mut(id, pattern).is_some() { return Some(&mut self.global) }
         for scope in self.scopes.iter_mut().rev() {
             if scope.get_native_fn_mut(id, pattern).is_some() { return Some(scope) }
         }
-        if self.global.get_native_fn_mut(id, pattern).is_some() { return Some(&mut self.global) }
         None
     }
     // scope of fn
     pub fn get_scope_native_fn_any(&self, id: &String) -> Option<&Scope> {
+        if self.global.get_native_fn_any(id).is_some() { return Some(&self.global) }
         for scope in self.scopes.iter().rev() {
             if scope.get_native_fn_any(id).is_some() { return Some(scope) }
         }
-        if self.global.get_native_fn_any(id).is_some() { return Some(&self.global) }
         None
     }
     pub fn get_scope_native_fn_any_mut(&mut self, id: &String) -> Option<&mut Scope> {
+        if self.global.get_native_fn_any_mut(id).is_some() { return Some(&mut self.global) }
         for scope in self.scopes.iter_mut().rev() {
             if scope.get_native_fn_any_mut(id).is_some() { return Some(scope) }
         }
-        if self.global.get_native_fn_any_mut(id).is_some() { return Some(&mut self.global) }
         None
     }
 
@@ -472,10 +472,11 @@ impl Context {
         self.get_scope_fn_mut(id, pattern)?.get_fn_mut(id, pattern)
     }
     pub fn fn_exists(&self, id: &String) -> bool {
+        if self.global.fn_exists(id) { return true }
         for scope in self.scopes.iter().rev() {
             if scope.fn_exists(id) { return true }
         }
-        self.global.fn_exists(id)
+        false
     }
     // get native fn
     pub fn get_native_fn(&self, id: &String, pattern: &Vec<Type>) -> Option<&NativFunction> {
@@ -485,10 +486,11 @@ impl Context {
         self.get_scope_native_fn_mut(id, pattern)?.get_native_fn_mut(id, pattern)
     }
     pub fn native_fn_exists(&self, id: &String) -> bool {
+        if self.global.native_fn_exists(id) { return true }
         for scope in self.scopes.iter().rev() {
             if scope.native_fn_exists(id) { return true }
         }
-        self.global.native_fn_exists(id)
+        false
     }
     // get patterns
     pub fn get_patterns(&self, id: &String) -> Option<Vec<Vec<(Type, bool)>>> {

@@ -360,6 +360,30 @@ fn _if(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
         Ok((Some(else_.clone()), Return::None))
     }
 }
+fn _if_do(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
+    let cond = context.get_var(&":cond".to_string()).unwrap();
+    let case = context.get_var(&":case".to_string()).unwrap().clone();
+    if let Value::Closure(case) = case {
+        if cond == &Value::Bool(true) {
+            return interpret(&case, context)
+        }
+        Ok((None, Return::None))
+    } else { panic!("type checking doesn't work") }
+}
+fn _if_do_else(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
+    let cond = context.get_var(&":cond".to_string()).unwrap();
+    let case = context.get_var(&":case".to_string()).unwrap().clone();
+    let else_ = context.get_var(&":else".to_string()).unwrap().clone();
+    if let Value::Closure(case) = case {
+        if let Value::Closure(else_) = else_ {
+            if cond == &Value::Bool(true) {
+                interpret(&case, context)
+            } else {
+                interpret(&else_, context)
+            }
+        } else { panic!("type checking doesn't work") }
+    } else { panic!("type checking doesn't work") }
+}
 fn _for(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
     let id = context.get_var(&":id".to_string()).unwrap().clone();
     let pos = context.get_var_pos(&":id".to_string()).unwrap().clone();
@@ -1283,6 +1307,25 @@ pub fn std_context() -> Result<Context, Error> {
         return_type: Some(Type::Any),
         body: _if,
         inline: false
+    }, pos.clone())?;
+    context.create_native_fn(String::from("if"), NativFunction {
+        params: vec![
+            (":cond".to_string(), Type::Bool, false),
+            (":case".to_string(), Type::Any, false)
+        ],
+        return_type: Some(Type::Any),
+        body: _if_do,
+        inline: true
+    }, pos.clone())?;
+    context.create_native_fn(String::from("if"), NativFunction {
+        params: vec![
+            (":cond".to_string(), Type::Bool, false),
+            (":case".to_string(), Type::Any, false),
+            (":else".to_string(), Type::Any, false)
+        ],
+        return_type: Some(Type::Any),
+        body: _if_do_else,
+        inline: true
     }, pos.clone())?;
     context.create_native_fn(String::from("for"), NativFunction {
         params: vec![
