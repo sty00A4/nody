@@ -12,7 +12,8 @@ pub enum Node {
     Word { v: String, pos: Position }, Key { v: String, pos: Position },
     Node { head: NodeRef, args: Vec<NodeRef>, pos: Position }, Body { nodes: Vec<Node>, pos: Position },
     Vector { nodes: Vec<Node>, pos: Position },
-    Closure { node: NodeRef, pos: Position }, Params { params: Vec<(String, NodeRef, bool)>, pos: Position }
+    Closure { node: NodeRef, pos: Position }, Params { params: Vec<(String, NodeRef, bool)>, pos: Position },
+    Object { entries: Vec<(String, NodeRef)>, pos: Position }
 }
 impl Node {
     pub fn pos(&self) -> &Position {
@@ -30,7 +31,8 @@ impl Node {
             Node::Body { nodes:_, pos }         => pos,
             Node::Vector { nodes:_, pos }       => pos,
             Node::Closure { node:_, pos }       => pos,
-            Node::Params { params:_, pos }      => pos
+            Node::Params { params:_, pos }      => pos,
+            Node::Object { entries:_, pos }         => pos,
         }
     }
 }
@@ -54,30 +56,39 @@ impl Debug for Node {
             params.iter().map(|(id, typ, more)|
                 format!("{} {}{}", id, typ, if *more { "*" } else { "" }))
             .collect::<Vec<String>>().join(" ")),
+            Node::Object { entries, pos:_ }    => write!(f, "${{{}}}",
+            entries.iter().map(|(key, value)|
+                format!("{} {:?}", key, value))
+            .collect::<Vec<String>>().join(" ")),
         }
     }
 }
 impl Display for Node {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Node::None { pos:_ }              => write!(f, "()"),
-            Node::Int { v, pos:_ }            => write!(f, "{v:?}"),
-            Node::Float { v, pos:_ }          => write!(f, "{v:?}"),
-            Node::Char { v, pos:_ }           => write!(f, "'{v}"),
-            Node::Bool { v, pos:_ }           => write!(f, "{v:?}"),
-            Node::String { v, pos:_ }         => write!(f, "{v:?}"),
-            Node::Type { v, pos:_ }           => write!(f, "{v:?}"),
-            Node::Word { v, pos:_ }           => write!(f, "{v}"),
-            Node::Key { v, pos:_ }            => write!(f, "@{v}"),
-            Node::Node { head, args, pos:_ }  => write!(f, "({head} {})", args.iter().map(|x| x.to_string()).collect::<Vec<String>>().join(" ")),
-            Node::Body { nodes, pos:_ }       => write!(f, "{{{}}}", nodes.iter().map(|x| x.to_string()).collect::<Vec<String>>().join(" ")),
-            Node::Vector { nodes, pos:_ }     => write!(f, "[{}]", nodes.iter().map(|x| x.to_string()).collect::<Vec<String>>().join(" ")),
-            Node::Closure { node, pos:_ }     => write!(f, "#{node}"),
-            Node::Params { params, pos:_ }    => write!(f, "$({})",
-            params.iter().map(|(id, typ, more)|
-                format!("{} {}{}", id, typ, if *more { "*" } else { "" }))
-            .collect::<Vec<String>>().join(" ")),
-        }
+        write!(f, "{self:?}")
+    }
+}
+
+pub fn word_to_node(word: String, pos: Position) -> Node {
+    match word.as_str() {
+        "true"      => Node::Bool { v: true, pos },
+        "false"     => Node::Bool { v: false, pos },
+        "any"       => Node::Type { v: Type::Any, pos },
+        "int"       => Node::Type { v: Type::Int, pos },
+        "float"     => Node::Type { v: Type::Float, pos },
+        "char"      => Node::Type { v: Type::Char, pos },
+        "bool"      => Node::Type { v: Type::Bool, pos },
+        "str"       => Node::Type { v: Type::String, pos },
+        "key"       => Node::Type { v: Type::Key, pos },
+        "path"      => Node::Type { v: Type::Path, pos },
+        "index"     => Node::Type { v: Type::Index, pos },
+        "closure"   => Node::Type { v: Type::Closure, pos },
+        "vec"       => Node::Type { v: Type::Vector(None), pos },
+        "obj"       => Node::Type { v: Type::Object, pos },
+        "fn"        => Node::Type { v: Type::Function(vec![], None), pos },
+        "native-fn" => Node::Type { v: Type::NativFunction(vec![], None), pos },
+        "type"      => Node::Type { v: Type::Type, pos },
+        _ => Node::Word { v: word, pos }
     }
 }
 
@@ -127,12 +138,6 @@ impl Scanner {
         self.advance_ws();
         match self.get() {
             ')' | ']' | '}' => Err(Error::UnexpectedSymbol(self.get())),
-            // ';' => {
-            //     while self.get() == ';' && self.get() != '\0' {
-            //         while self.get() != '\n' && self.get() != '\0' { self.advance(); }
-            //     }
-            //     Ok(None)
-            // }
             '(' => {
                 let (start_ln, start_col) = (self.ln, self.col);
                 self.advance(); self.advance_ws();
@@ -208,66 +213,66 @@ impl Scanner {
             '$' => {
                 let (start_ln, start_col) = (self.ln, self.col);
                 self.advance(); self.advance_ws();
-                if self.get() != '(' {
-                    return Err(Error::ExpectedSymbol('(', self.get()))
-                }
-                self.advance(); self.advance_ws();
-                let mut params: Vec<(String, Box<Node>, bool)> = vec![];
-                while self.get() != ')' && self.get() != '\0' {
-                    let (param_start_ln, param_start_col) = (self.ln, self.col);
-                    let mut param = String::new();
-                    while !WS.contains(&self.get()) && !SYMBOLS.contains(&self.get()) && self.get() != '\0' {
-                        param.push(self.get());
-                        self.advance();
-                    }
-                    if param.len() == 0 { return Err(Error::ExpectedWord) }
-                    self.advance_ws();
-                    if SYMBOLS.contains(&self.get()) {
-                        let typ = self.node()?;
-                        if typ.is_none() { return Err(Error::UnexpectedEnd) }
-                        let typ = Box::new(typ.unwrap());
-                        let pos = Position::new(start_ln..start_ln, start_col..start_col, &self.path);
-                        let pos = Position::between(pos, typ.pos().clone());
-                        let mut more = self.get() == '*';
-                        if more { self.advance(); self.advance_ws(); }
-                        params.push((param, typ, more));
-                    } else {
-                        let mut typ = String::new();
-                        while !WS.contains(&self.get()) && !SYMBOLS.contains(&self.get()) && self.get() != '*' && self.get() != '\0' {
-                            typ.push(self.get());
-                            self.advance();
+                match self.get() {
+                    '(' => {
+                        self.advance(); self.advance_ws();
+                        let mut params: Vec<(String, Box<Node>, bool)> = vec![];
+                        while self.get() != ')' && self.get() != '\0' {
+                            let mut param = String::new();
+                            while !WS.contains(&self.get()) && !SYMBOLS.contains(&self.get()) && self.get() != '\0' {
+                                param.push(self.get());
+                                self.advance();
+                            }
+                            if param.len() == 0 { return Err(Error::ExpectedWord) }
+                            self.advance_ws();
+                            if SYMBOLS.contains(&self.get()) {
+                                let typ = self.node()?;
+                                if typ.is_none() { return Err(Error::UnexpectedEnd) }
+                                let typ = Box::new(typ.unwrap());
+                                let mut more = self.get() == '*';
+                                if more { self.advance(); self.advance_ws(); }
+                                params.push((param, typ, more));
+                            } else {
+                                let mut typ = String::new();
+                                while !WS.contains(&self.get()) && !SYMBOLS.contains(&self.get()) && self.get() != '*' && self.get() != '\0' {
+                                    typ.push(self.get());
+                                    self.advance();
+                                }
+                                let pos = Position::new(start_ln..self.ln+1, start_col..self.col, &self.path);
+                                if typ.len() == 0 { return Err(Error::ExpectedWord) }
+                                self.advance_ws();
+                                let typ = Box::new(word_to_node(typ, pos));
+                                let mut more = self.get() == '*';
+                                if more { self.advance(); self.advance_ws(); }
+                                params.push((param, typ, more));
+                            }
                         }
-                        let pos = Position::new(start_ln..self.ln+1, start_col..self.col, &self.path);
-                        if typ.len() == 0 { return Err(Error::ExpectedWord) }
-                        self.advance_ws();
-                        let typ = Box::new(match typ.as_str() {
-                            "true"      => Node::Bool { v: true, pos },
-                            "false"     => Node::Bool { v: false, pos },
-                            "any"       => Node::Type { v: Type::Any, pos },
-                            "int"       => Node::Type { v: Type::Int, pos },
-                            "float"     => Node::Type { v: Type::Float, pos },
-                            "char"      => Node::Type { v: Type::Char, pos },
-                            "bool"      => Node::Type { v: Type::Bool, pos },
-                            "str"       => Node::Type { v: Type::String, pos },
-                            "key"       => Node::Type { v: Type::Key, pos },
-                            "path"      => Node::Type { v: Type::Path, pos },
-                            "index"     => Node::Type { v: Type::Index, pos },
-                            "closure"   => Node::Type { v: Type::Closure, pos },
-                            "vec"       => Node::Type { v: Type::Vector(None), pos },
-                            "obj"       => Node::Type { v: Type::Object, pos },
-                            "fn"        => Node::Type { v: Type::Function(vec![], None), pos },
-                            "native-fn" => Node::Type { v: Type::NativFunction(vec![], None), pos },
-                            "type"      => Node::Type { v: Type::Type, pos },
-                            _ => Node::Word { v: typ, pos }
-                        });
-                        let mut more = self.get() == '*';
-                        if more { self.advance(); self.advance_ws(); }
-                        params.push((param, typ, more));
+                        if self.get() == '\0' { return Err(Error::UnexpectedEnd) }
+                        self.advance();
+                        Ok(Some(Node::Params { params, pos: Position::new(start_ln..self.ln+1, start_col..self.col, &self.path) }))
                     }
+                    '{' => {
+                        self.advance(); self.advance_ws();
+                        let mut entries: Vec<(String, Box<Node>)> = vec![];
+                        while self.get() != '}' && self.get() != '\0' {
+                            let mut key = String::new();
+                            while !WS.contains(&self.get()) && !SYMBOLS.contains(&self.get()) && self.get() != '\0' {
+                                key.push(self.get());
+                                self.advance();
+                            }
+                            if key.len() == 0 { return Err(Error::ExpectedWord) }
+                            self.advance_ws();
+                            let value = self.node()?; self.advance_ws();
+                            if value.is_none() { return Err(Error::UnexpectedEnd) }
+                            let value = Box::new(value.unwrap());
+                            entries.push((key, value));
+                        }
+                        if self.get() == '\0' { return Err(Error::UnexpectedEnd) }
+                        self.advance();
+                        Ok(Some(Node::Object { entries, pos: Position::new(start_ln..self.ln+1, start_col..self.col, &self.path) }))
+                    }
+                    _ => Err(Error::ExpectedSymbols(vec!['(', '{'], self.get()))
                 }
-                if self.get() == '\0' { return Err(Error::UnexpectedEnd) }
-                self.advance();
-                Ok(Some(Node::Params { params, pos: Position::new(start_ln..self.ln+1, start_col..self.col, &self.path) }))
             }
             '"' => {
                 let (start_ln, start_col) = (self.ln, self.col);
@@ -360,24 +365,7 @@ impl Scanner {
                     self.advance();
                 }
                 let pos = Position::new(start_ln..self.ln+1, start_col..self.col, &self.path);
-                Ok(Some(match word.as_str() {
-                    "true"      => Node::Bool { v: true, pos },
-                    "false"     => Node::Bool { v: false, pos },
-                    "any"       => Node::Type { v: Type::Any, pos },
-                    "int"       => Node::Type { v: Type::Int, pos },
-                    "float"     => Node::Type { v: Type::Float, pos },
-                    "char"      => Node::Type { v: Type::Char, pos },
-                    "bool"      => Node::Type { v: Type::Bool, pos },
-                    "str"       => Node::Type { v: Type::String, pos },
-                    "key"       => Node::Type { v: Type::Key, pos },
-                    "closure"   => Node::Type { v: Type::Closure, pos },
-                    "vec"       => Node::Type { v: Type::Vector(None), pos },
-                    "obj"       => Node::Type { v: Type::Object, pos },
-                    "fn"        => Node::Type { v: Type::Function(vec![], None), pos },
-                    "native-fn" => Node::Type { v: Type::NativFunction(vec![], None), pos },
-                    "type"      => Node::Type { v: Type::Type, pos },
-                    _ => Node::Word { v: word, pos }
-                }))
+                Ok(Some(word_to_node(word, pos)))
             }
         }
     }

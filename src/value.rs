@@ -367,7 +367,8 @@ impl Debug for Value {
             .collect::<Vec<String>>().join(" ")),
             Self::Function(v)      => v.to_string(),
             Self::NativFunction(v) => v.to_string(),
-            Self::Object(_)        => "obj".to_string(),
+            Self::Object(scope)    => format!("{{ {} }}", scope.vars.iter().map(|(key, (value, _, _))|format!("{key}={value:?}"))
+            .collect::<Vec<String>>().join(" ")),
             Self::Type(v)          => v.to_string()
         })
     }
@@ -391,7 +392,8 @@ impl Display for Value {
             .collect::<Vec<String>>().join(" ")),
             Self::Function(v)      => v.to_string(),
             Self::NativFunction(v) => v.to_string(),
-            Self::Object(_)        => "obj".to_string(),
+            Self::Object(scope)    => format!("{{ {} }}", scope.vars.iter().map(|(key, (value, _, _))| format!("{key}={value:?}"))
+            .collect::<Vec<String>>().join(" ")),
             Self::Type(v)          => v.to_string()
         })
     }

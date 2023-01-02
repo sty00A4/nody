@@ -52,7 +52,7 @@ pub fn interpret(node: &Node, context: &mut Context) -> Result<(Option<Value>, R
                     if let Value::Type(typ) = typ {
                         params.push((param.clone(), typ, *more));
                     } else {
-                        context.trace_push(pos);
+                        context.trace_push(type_node.pos());
                         return Err(Error::ExpectedType(Type::Type, typ.typ()))
                     }
                 } else {
@@ -61,6 +61,19 @@ pub fn interpret(node: &Node, context: &mut Context) -> Result<(Option<Value>, R
                 }
             }
             Ok((Some(Value::Params(params)), Return::None))
+        }
+        Node::Object { entries, pos } => {
+            let mut obj_scope = Scope::new();
+            for (key, value_node) in entries.iter() {
+                let (value, _) = interpret(value_node, context)?;
+                if let Some(value) = value {
+                    obj_scope.create_var(key.clone(), value, true, value_node.pos().clone(), true)?;
+                } else {
+                    context.trace_push(value_node.pos());
+                    return Err(Error::Expected)
+                }
+            }
+            Ok((Some(Value::Object(obj_scope)), Return::None))
         }
         Node::Body { nodes, pos:_ } => {
             context.push();
@@ -177,6 +190,27 @@ pub fn interpret(node: &Node, context: &mut Context) -> Result<(Option<Value>, R
                             _ => {
                                 context.trace_push(&poses[0]);
                                 Err(Error::ExpectedTypes(vec![Type::Int], types[0].clone()))
+                            }
+                        }
+                    } else {
+                        context.trace_push(&poses[0]);
+                        Err(Error::ValuePatternNotFound(Type::Vector(Some(Box::new(Type::Any))), types))
+                    }
+                    Value::Object(obj_scope) => if values.len() == 1 {
+                        context.pop();
+                        match &values[0] {
+                            Value::Key(key) => {
+                                match obj_scope.get_var(key) {
+                                    Some(value) => Ok((Some(value.clone()), Return::None)),
+                                    None => {
+                                        context.trace_push(&poses[0]);
+                                        Err(Error::NotDefinedKey(key.clone()))
+                                    }
+                                }
+                            }
+                            _ => {
+                                context.trace_push(&poses[0]);
+                                Err(Error::ExpectedTypes(vec![Type::Key], types[0].clone()))
                             }
                         }
                     } else {

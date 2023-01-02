@@ -131,13 +131,19 @@ fn _exist(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
 fn _exist_path(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
     let path = context.get_var(&":path".to_string()).unwrap().clone();
     if let Value::Path(path) = path {
-        Ok((Some(Value::Bool(path.get(context)?.is_some())), Return::None))
+        Ok((Some(Value::Bool(match path.get(context) {
+            Ok(value) => value.is_some(),
+            Err(_) => false
+        })), Return::None))
     } else { panic!("type checking doesn't work") }
 }
 fn _exist_index(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
     let index = context.get_var(&":index".to_string()).unwrap().clone();
     if let Value::Index(index) = index {
-        Ok((Some(Value::Bool(index.get(context)?.is_some())), Return::None))
+        Ok((Some(Value::Bool(match index.get(context) {
+            Ok(value) => value.is_some(),
+            Err(_) => false
+        })), Return::None))
     } else { panic!("type checking doesn't work") }
 }
 fn _is_mut(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
@@ -1069,6 +1075,12 @@ fn _input(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
         Ok((Some(Value::String(input)), Return::None))
     } else { panic!("type checking doesn't work") }
 }
+fn _error(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
+    let msg = context.get_var(&"msg".to_string()).unwrap();
+    if let Value::String(msg) = msg {
+        Err(Error::Error(msg.clone()))
+    } else { panic!("type checking doesn't work") }
+}
 
 pub fn std_context() -> Result<Context, Error> {
     let mut context = Context::new();
@@ -1732,6 +1744,12 @@ pub fn std_context() -> Result<Context, Error> {
         params: vec![("msg".to_string(), Type::String, false)],
         return_type: Some(Type::String),
         body: _input,
+        inline: false
+    }, pos.clone())?;
+    context.create_native_fn(String::from("error!"), NativFunction {
+        params: vec![("msg".to_string(), Type::String, false)],
+        return_type: None,
+        body: _error,
         inline: false
     }, pos.clone())?;
     let std_path = String::from("nody_std/std.nd");

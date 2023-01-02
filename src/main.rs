@@ -18,6 +18,9 @@ use std::fmt::{Debug, Display};
 use core::num::IntErrorKind;
 use std::cmp::{min, max};
 use std::io::Write;
+use std::thread;
+
+const STACK_SIZE: usize = 4 * 1024 * 1024;
 
 pub fn run(path: &String, text: String) -> Result<(Option<Value>, Return), Error> {
     let mut context = std_context()?;
@@ -39,7 +42,7 @@ pub fn run_file_context(path: &String, context: &mut Context) -> Result<(Option<
     }
 }
 
-fn main() {
+pub fn nody() {
     let args: Vec<String> = std::env::args().collect();
     let mut args = args.iter();
     args.next();
@@ -56,6 +59,14 @@ fn main() {
             println!("  ...more comming soon...");
         }
     }
+}
+
+fn main() {
+    let program = thread::Builder::new()
+        .stack_size(STACK_SIZE)
+        .spawn(nody)
+        .unwrap();
+    program.join().unwrap();
 }
 
 #[cfg(test)]

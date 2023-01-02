@@ -1,0 +1,92 @@
+; --- LEXER ---
+(def-global @tokenize $(in str) #{
+	(mut @tokens (vec any []))
+	(mut @idx 0)
+	(while #(< idx (len in)) #{
+		; skip white space
+		(while #(contains [' ' '\t' '\r' '\n'] (in idx)) #{
+			(inc! @idx)
+			(if (>= idx (len in)) #(break))
+		})
+		(if (>= idx (len in)) #(break))
+		; number
+		(if (digit? (in idx)) #{
+			(mut @num "")
+			(while #(digit? (in idx)) #{
+				(str-push @num (in idx))
+				(inc! @idx)
+				(if (>= idx (len in)) #(break))
+			})
+			(push @tokens (int num))
+		; symbol
+		} #(if (contains ['+' '-' '*' '/' '(' ')'] (in idx)) #{
+			(push @tokens (in idx))
+			(inc! @idx)
+		} #(inc! @idx)))
+	})
+	(return tokens)
+})
+; --- PARSER ---
+(def-global-inline @atom $(:tokens key :idx key) #{
+	(let @token ((get :tokens) (get :idx)))
+	(inc! :idx)
+	(if (= (type token) int) #(return ${ typ "int" value token }))
+	(if (= token '(') #{
+		(if (not (exist? (index :tokens (get :idx)))) #(error! "unexpected end"))
+		(let @node (expr :tokens :idx))
+		(if (!= token ')') #(error! "expected ')'"))
+		(inc! :idx)
+		(return node)
+	})
+	(error! (concat "unexpected '" (str ((get :tokens) (get :idx))) "'"))
+})
+(def-global-inline @factor $(:tokens key :idx key) #{
+	(if (contains ['-' '+'] ((get :tokens) (get :idx))) #{
+		(let @op ((get :tokens) (get :idx)))
+		(inc! :idx)(if (not (exist? (index :tokens (get :idx)))) #(error! "unexpected end"))
+		(return ${ typ "unary" op op node (factor :tokens :idx) })
+	})
+	(return (atom :tokens :idx))
+})
+(def-global-inline @term $(:tokens key :idx key) #{
+	(mut @left (factor :tokens :idx))
+	(if (not (exist? (index :tokens (get :idx)))) #(return left))
+	(while #(contains ['*' '/'] ((get :tokens) (get :idx))) #{
+		(let @op ((get :tokens) (get :idx)))
+		(inc! :idx)(if (not (exist? (index :tokens (get :idx)))) #(error! "unexpected end"))
+		(let @right (factor :tokens :idx))
+		(set @left ${ typ "binary" left left op op right right })
+		(if (not (exist? (index :tokens (get :idx)))) #(break))
+	})
+	(return left)
+})
+(def-global-inline @arith $(:tokens key :idx key) #{
+	(mut @left (term :tokens :idx))
+	(if (not (exist? (index :tokens (get :idx)))) #(return left))
+	(while #(contains ['+' '-'] ((get :tokens) (get :idx))) #{
+		(let @op ((get :tokens) (get :idx)))
+		(inc! :idx)(if (not (exist? (index :tokens (get :idx)))) #(error! "unexpected end"))
+		(let @right (term :tokens :idx))
+		(set @left ${ typ "binary" left left op op right right })
+		(if (not (exist? (index :tokens (get :idx)))) #(break))
+	})
+	(return left)
+})
+(def-global-inline @expr $(:tokens key :idx key) #(arith :tokens :idx))
+(def-global @parse $(tokens (vec any)) #{
+	(mut @idx 0)
+	(return (expr @tokens @idx))
+})
+(def-global @ast-to-str $(ast obj)
+	#(if (= (ast @typ) "binary")
+		#(concat "(" (ast-to-str (ast @left)) " " (ast @op) " " (ast-to-str (ast @right)) ")")
+	#(if (= (ast @typ) "unary")
+		#(concat "(" (ast @op) (ast-to-str (ast @node)) ")")
+	#(if (= (ast @typ) "int")
+		#(str (ast @value))
+	#(error! ("unsupported node type: " (? (exist? (path @ast @typ)) (str (ast @typ)) "?")))
+	)))
+)
+; --- TESTS ---
+(print (ast-to-str (parse (tokenize "1 + 2 * 3"))))
+(print (ast-to-str (parse (tokenize "(1 + 2) * 3"))))

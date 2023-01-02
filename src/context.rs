@@ -2,10 +2,10 @@ use crate::*;
 
 #[derive(Debug, Clone)]
 pub struct Scope {
-    vars: HashMap<String, (Value, bool, Position)>,
-    funcs: HashMap<String, Vec<(Function, Position)>>,
-    native_funcs: HashMap<String, Vec<(NativFunction, Position)>>,
-    subs: HashMap<String, Scope>
+    pub vars: HashMap<String, (Value, bool, Position)>,
+    pub funcs: HashMap<String, Vec<(Function, Position)>>,
+    pub native_funcs: HashMap<String, Vec<(NativFunction, Position)>>,
+    pub subs: HashMap<String, Scope>
 }
 impl Scope {
     pub fn new() -> Self {

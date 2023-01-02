@@ -20,8 +20,9 @@ pub fn patterns_display(patterns: &Vec<Vec<(Type, bool)>>) -> String {
 }
 #[derive(Debug, Clone)]
 pub enum Error {
+    Error(String),
     TargetFileNotFound(String),
-    UnexpectedEnd, UnexpectedSymbol(char), ExpectedSymbol(char, char), ExpectedWord,
+    UnexpectedEnd, UnexpectedSymbol(char), ExpectedSymbol(char, char), ExpectedSymbols(Vec<char>, char), ExpectedWord,
     ParseFloat(String), ParseInt(String), ParseIntOverflow(String), ParseIntNegOverflow(String),
     ParseChar(String), ParseBool(String), ParseString(String),
     UnclosedChar, UnclosedString,
@@ -30,15 +31,18 @@ pub enum Error {
     Expected, ExpectedArg, ExpectedType(Type, Type), ExpectedTypes(Vec<Type>, Type),
     FunctionPatternNotFound(String, Vec<Type>, Vec<Vec<(Type, bool)>>), ValuePatternNotFound(Type, Vec<Type>),
     InvalidHeadValue(Value), InvalidHeadCastType(Type), InvalidCastBetween(Type, Type),
-    IndexOutOfRange(usize, usize), IllegalNegativeIndex(i64)
+    IndexOutOfRange(usize, usize), IllegalNegativeIndex(i64),
+    NotDefinedKey(String)
 }
 impl Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Self::Error(msg) => write!(f, "ERROR: {msg}"),
             Self::TargetFileNotFound(path) => write!(f, "ERROR: {path:?} couldn't be found in the current directory"),
             Self::UnexpectedEnd => write!(f, "ERROR: unexpected end of input"),
             Self::UnexpectedSymbol(s) => write!(f, "ERROR: unexpected {s:?}"),
             Self::ExpectedSymbol(expected, got) => write!(f, "ERROR: expected {expected:?}, got {got:?}"),
+            Self::ExpectedSymbols(expected, got) => write!(f, "ERROR: expected {:?}, got {got:?}", expected.iter().map(|x| x.to_string()).collect::<Vec<String>>().join("|")),
             Self::ExpectedWord => write!(f, "ERROR: expected the beginning of a word here"),
             Self::ParseFloat(n) => write!(f, "ERROR: {n:?} couldn't be parsed as a float"),
             Self::ParseInt(n) => write!(f, "ERROR: {n:?} couldn't be parsed as an int"),
@@ -70,6 +74,7 @@ impl Display for Error {
             Self::InvalidCastBetween(t1, t2) => write!(f, "ERROR: invalid cast from {t2} to {t1}"),
             Self::IndexOutOfRange(idx, size) => write!(f, "ERROR: index {idx} out of range of size {size}"),
             Self::IllegalNegativeIndex(idx) => write!(f, "ERROR: illegal negative index {idx}"),
+            Self::NotDefinedKey(key) => write!(f, "ERROR: {key:?} doesn't exist in object"),
         }
     }
 }
