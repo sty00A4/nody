@@ -18,20 +18,20 @@ use std::fmt::{Debug, Display};
 use core::num::IntErrorKind;
 use std::cmp::{min, max};
 use std::io::Write;
-use std::thread;
+use std::{thread, fs, env};
 
 const STACK_SIZE: usize = 4 * 1024 * 1024;
 
-pub fn run(path: &String, text: String) -> Result<(Option<Value>, Return), Error> {
-    let mut context = std_context()?;
+pub fn run(path: &String, text: String, std_path: Option<String>) -> Result<(Option<Value>, Return), Error> {
+    let mut context = std_context(std_path)?;
     interpret(&scan_file(path, text)?, &mut context)
 }
 pub fn run_context(path: &String, text: String, context: &mut Context) -> Result<(Option<Value>, Return), Error> {
     interpret(&scan_file(path, text)?, context)
 }
-pub fn run_file(path: &String) -> Result<(Option<Value>, Return), Error> {
+pub fn run_file(path: &String, std_path: Option<String>) -> Result<(Option<Value>, Return), Error> {
     match std::fs::read_to_string(path) {
-        Ok(text) => run(path, text),
+        Ok(text) => run(path, text, std_path),
         Err(_) => Err(Error::TargetFileNotFound(path.clone()))
     }
 }
@@ -43,10 +43,20 @@ pub fn run_file_context(path: &String, context: &mut Context) -> Result<(Option<
 }
 
 pub fn nody() {
-    let args: Vec<String> = std::env::args().collect();
+    let args: Vec<String> = env::args().collect();
     let mut args = args.iter();
     args.next();
-    let mut context = std_context().unwrap_or_else(|e| panic!("{e}"));
+    let std_path = if let Ok(path) = env::current_exe() {
+        let path = path.display().to_string();
+        let path_split = path.split("\\").collect::<Vec<&str>>();
+        let mut path: Vec<String> = vec![];
+        for x in path_split.get(0..path_split.len()-1).unwrap() {
+            path.push(x.to_string());
+        }
+        path.push("nody_std".to_string());
+        Some(path.join("\\"))
+    } else { None };
+    let mut context = std_context(std_path).unwrap_or_else(|e| { eprintln!("{e}"); Context::new() });
     match args.next() {
         Some(path) => match run_file_context(path, &mut context) {
             Ok((value, ret)) => if let Some(value) = value { println!("{value}") }
@@ -63,6 +73,7 @@ pub fn nody() {
 
 fn main() {
     let program = thread::Builder::new()
+        .name("main".to_string())
         .stack_size(STACK_SIZE)
         .spawn(nody)
         .unwrap();

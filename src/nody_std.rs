@@ -1106,7 +1106,7 @@ fn _error(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
     } else { panic!("type checking doesn't work") }
 }
 
-pub fn std_context() -> Result<Context, Error> {
+pub fn std_context(std_dir_path: Option<String>) -> Result<Context, Error> {
     let mut context = Context::new();
     let pos = Position::new(0..0, 0..0, &String::from("<STD>"));
     // let
@@ -1795,8 +1795,13 @@ pub fn std_context() -> Result<Context, Error> {
         body: _error,
         inline: false
     }, pos.clone())?;
-    let std_path = String::from("nody_std/std.nd");
-    let _ = run_file_context(&std_path, &mut context)?;
+    match std_dir_path {
+        Some(std_dir_path) => {
+            let std_path = std_dir_path.clone() + "\\std.nd";
+            run_file_context(&std_path, &mut context)?;
+        },
+        None => {}
+    }
     context.scopes = vec![Scope::new()];
     Ok(context)
 }
