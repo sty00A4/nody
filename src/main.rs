@@ -23,7 +23,7 @@ use std::{thread, fs, env};
 const STACK_SIZE: usize = 4 * 1024 * 1024;
 
 pub fn run(path: &String, text: String, std_path: Option<String>) -> Result<(Option<Value>, Return), Error> {
-    let mut context = std_context(std_path)?;
+    let mut context = std_context(path.clone(), std_path)?;
     interpret(&scan_file(path, text)?, &mut context)
 }
 pub fn run_context(path: &String, text: String, context: &mut Context) -> Result<(Option<Value>, Return), Error> {
@@ -56,7 +56,10 @@ pub fn nody() {
         path.push("nody_std".to_string());
         Some(path.join("\\"))
     } else { None };
-    let mut context = std_context(std_path).unwrap_or_else(|e| { eprintln!("{e}"); Context::new() });
+    let mut context = std_context("<STD>".to_string(), std_path.clone()).unwrap_or_else(|e| {
+        eprintln!("{e}");
+        Context::new("<STD>".to_string(), std_path)
+    });
     match args.next() {
         Some(path) => match run_file_context(path, &mut context) {
             Ok((value, ret)) => if let Some(value) = value { println!("{value}") }
@@ -66,7 +69,6 @@ pub fn nody() {
             println!("This is Nody interpreter is written in Rust.");
             println!("USAGE:");
             println!("  nody [file path] - execute file");
-            println!("  ...more comming soon...");
         }
     }
 }
@@ -86,7 +88,7 @@ mod test {
 
     #[test]
     fn context() {
-        let mut context = Context::new();
+        let mut context = Context::new("".to_string(), Some("".to_string()));
         assert_eq!(context.scopes.len(), 1); // first scope exists
         context.push();                      // second scope
         assert_eq!(context.scopes.len(), 2); // 2 scopes
@@ -96,7 +98,7 @@ mod test {
     }
     #[test]
     fn context_vars() -> Result<(), Error> {
-        let mut context = Context::new();
+        let mut context = Context::new("".to_string(), Some("".to_string()));
         let path = String::from("<test>");
         let pos = Position::new(0..0, 0..0, &path);
         let x = String::from("x");

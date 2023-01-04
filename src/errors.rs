@@ -21,7 +21,7 @@ pub fn patterns_display(patterns: &Vec<Vec<(Type, bool)>>) -> String {
 #[derive(Debug, Clone)]
 pub enum Error {
     Error(String),
-    TargetFileNotFound(String),
+    TargetFileNotFound(String), FileNotFound(String),
     UnexpectedEnd, UnexpectedSymbol(char), ExpectedSymbol(char, char), ExpectedSymbols(Vec<char>, char), ExpectedWord,
     ParseFloat(String), ParseInt(String), ParseIntOverflow(String), ParseIntNegOverflow(String),
     ParseChar(String), ParseBool(String), ParseString(String),
@@ -38,7 +38,8 @@ impl Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Error(msg) => write!(f, "ERROR: {msg}"),
-            Self::TargetFileNotFound(path) => write!(f, "ERROR: {path:?} couldn't be found in the current directory"),
+            Self::TargetFileNotFound(path) => write!(f, "ERROR: target file {path:?} couldn't be found in the current directory"),
+            Self::FileNotFound(path) => write!(f, "ERROR: {path:?} couldn't be found in the current directory"),
             Self::UnexpectedEnd => write!(f, "ERROR: unexpected end of input"),
             Self::UnexpectedSymbol(s) => write!(f, "ERROR: unexpected {s:?}"),
             Self::ExpectedSymbol(expected, got) => write!(f, "ERROR: expected {expected:?}, got {got:?}"),

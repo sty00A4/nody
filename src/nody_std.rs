@@ -1105,9 +1105,40 @@ fn _error(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
         Err(Error::Error(msg.clone()))
     } else { panic!("type checking doesn't work") }
 }
+// fs
+fn _import(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
+    let path = context.get_var(&"path".to_string()).unwrap();
+    if let Value::String(path) = path {
+        let mut file_context = Context::new(path.clone(), context.std_path.clone());
+        file_context.global = context.global.clone();
+        run_file_context(path, &mut file_context)?;
+        context.global = file_context.global;
+        Ok((None, Return::None))
+    } else { panic!("type checking doesn't work") }
+}
+fn _import_var(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
+    let path = context.get_var(&"path".to_string()).unwrap();
+    if let Value::String(path) = path {
+        let mut file_context = Context::new(path.clone(), context.std_path.clone());
+        file_context.global = context.global.clone();
+        run_file_context(path, &mut file_context)?;
+        context.global = file_context.global;
+        Ok((None, Return::None))
+    } else { panic!("type checking doesn't work") }
+}
+fn _read_file(context: &mut Context) -> Result<(Option<Value>, Return), Error> {
+    let path = context.get_var(&"path".to_string()).unwrap();
+    let pos = context.get_var_pos(&"path".to_string()).unwrap();
+    if let Value::String(path) = path {
+        match fs::read_to_string(path) {
+            Ok(content) => Ok((Some(Value::String(content)), Return::None)),
+            Err(_) => Err(Error::FileNotFound(path.clone()))
+        }
+    } else { panic!("type checking doesn't work") }
+}
 
-pub fn std_context(std_dir_path: Option<String>) -> Result<Context, Error> {
-    let mut context = Context::new();
+pub fn std_context(path: String, std_dir_path: Option<String>) -> Result<Context, Error> {
+    let mut context = Context::new(path, std_dir_path.clone());
     let pos = Position::new(0..0, 0..0, &String::from("<STD>"));
     // let
     context.create_native_fn(String::from("let"), NativFunction {
@@ -1793,6 +1824,19 @@ pub fn std_context(std_dir_path: Option<String>) -> Result<Context, Error> {
         params: vec![("msg".to_string(), Type::String, false)],
         return_type: None,
         body: _error,
+        inline: false
+    }, pos.clone())?;
+    // fs
+    context.create_native_fn(String::from("import"), NativFunction {
+        params: vec![("path".to_string(), Type::String, false)],
+        return_type: None,
+        body: _import,
+        inline: false
+    }, pos.clone())?;
+    context.create_native_fn(String::from("read-file"), NativFunction {
+        params: vec![("path".to_string(), Type::String, false)],
+        return_type: Some(Type::String),
+        body: _read_file,
         inline: false
     }, pos.clone())?;
     match std_dir_path {

@@ -107,7 +107,7 @@ pub fn interpret(node: &Node, context: &mut Context) -> Result<(Option<Value>, R
             if let Node::Word { v, pos: word_pos } = head.as_ref() {
                 match context.get_native_fn(v, &types) {
                     Some(func) => {
-                        let mut func_context = Context::call(context, func.inline);
+                        let mut func_context = Context::call(context.get_fn_pos(v, &types).unwrap().path.clone(), context, func.inline);
                         func_context.create_params(&func.params, values, poses, func.inline)?;
                         match (func.body)(&mut func_context) {
                             Ok(res) => {
@@ -117,13 +117,14 @@ pub fn interpret(node: &Node, context: &mut Context) -> Result<(Option<Value>, R
                             }
                             Err(e) => {
                                 context.after_call(func_context, func.inline);
+                                context.trace_push(pos);
                                 return Err(e)
                             }
                         }
                     }
                     None => match context.get_fn(v, &types) {
                         Some(func) => {
-                            let mut func_context = Context::call(context, func.inline);
+                            let mut func_context = Context::call(context.get_fn_pos(v, &types).unwrap().path.clone(), context, func.inline);
                             func_context.create_params(&func.params, values, poses, func.inline)?;
                             match interpret(&func.body, &mut func_context) {
                                 Ok(res) => {
@@ -133,6 +134,7 @@ pub fn interpret(node: &Node, context: &mut Context) -> Result<(Option<Value>, R
                                 }
                                 Err(e) => {
                                     context.after_call(func_context, func.inline);
+                                    context.trace_push(pos);
                                     return Err(e)
                                 }
                             }
@@ -159,7 +161,7 @@ pub fn interpret(node: &Node, context: &mut Context) -> Result<(Option<Value>, R
                 match head_value {
                     Value::Type(typ) => match context.get_native_fn(&typ.to_string(), &types) {
                         Some(func) => {
-                            let mut func_context = Context::call(context, func.inline);
+                            let mut func_context = Context::call(context.get_fn_pos(&typ.to_string(), &types).unwrap().path.clone(), context, func.inline);
                             func_context.create_params(&func.params, values, poses, func.inline)?;
                             let res = (func.body)(&mut func_context)?;
                             context.after_call(func_context, func.inline);
@@ -266,7 +268,7 @@ pub fn interpret(node: &Node, context: &mut Context) -> Result<(Option<Value>, R
                         Err(Error::ValuePatternNotFound(Type::Vector(Some(Box::new(Type::Any))), types))
                     }
                     Value::Function(func) => {
-                        let mut func_context = Context::call(context, func.inline);
+                        let mut func_context = Context::call(context.path.clone(), context, func.inline);
                         func_context.create_params(&func.params, values, poses, func.inline)?;
                         match interpret(&func.body, &mut func_context) {
                             Ok(res) => {
@@ -276,12 +278,13 @@ pub fn interpret(node: &Node, context: &mut Context) -> Result<(Option<Value>, R
                             }
                             Err(e) => {
                                 context.after_call(func_context, func.inline);
+                                context.trace_push(pos);
                                 Err(e)
                             }
                         }
                     }
                     Value::NativFunction(func) => {
-                        let mut func_context = Context::call(context, func.inline);
+                        let mut func_context = Context::call(context.path.clone(), context, func.inline);
                         func_context.create_params(&func.params, values, poses, func.inline)?;
                         match (func.body)(&mut func_context) {
                             Ok(res) => {
@@ -291,6 +294,7 @@ pub fn interpret(node: &Node, context: &mut Context) -> Result<(Option<Value>, R
                             }
                             Err(e) => {
                                 context.after_call(func_context, func.inline);
+                                context.trace_push(pos);
                                 return Err(e)
                             }
                         }

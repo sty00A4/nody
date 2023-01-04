@@ -107,6 +107,25 @@ impl Scope {
             None => None
         }
     }
+    pub fn get_fn_pos(&self, id: &String, pattern: &Vec<Type>) -> Option<&Position> {
+        match self.funcs.get(id) {
+            Some(defs) => {
+                for (func, pos) in defs.iter() {
+                    if func.pattern_match(pattern) { return Some(pos) }
+                }
+                None
+            }
+            None => match self.native_funcs.get(id) {
+                Some(defs) => {
+                    for (func, pos) in defs.iter() {
+                        if func.pattern_match(pattern) { return Some(pos) }
+                    }
+                    None
+                }
+                None => None
+            }
+        }
+    }
     pub fn get_fn_params(&self, id: &String, params: &Params) -> Option<&Function> {
         match self.funcs.get(id) {
             Some(defs) => {
@@ -253,15 +272,20 @@ impl PartialEq for Scope {
 pub struct Context {
     pub scopes: Vec<Scope>,
     pub global: Scope,
-    pub trace: Vec<Position>
+    pub trace: Vec<Position>,
+    pub path: String,
+    pub std_path: Option<String>,
 }
 impl Context {
-    pub fn new() -> Self { Self { scopes: vec![Scope::new()], global: Scope::new(), trace: vec![] } }
-    pub fn call(context: &Context, inline: bool) -> Self {
+    pub fn new(path: String, std_path: Option<String>) -> Self {
+        Self { scopes: vec![Scope::new()], global: Scope::new(), trace: vec![], path, std_path }
+    }
+    pub fn call(path: String, context: &Context, inline: bool) -> Self {
         Self {
             scopes: if inline { context.scopes.clone() } else { vec![Scope::new()] },
             global: context.global.clone(),
-            trace: context.trace.clone()
+            trace: context.trace.clone(),
+            path: context.path.clone(), std_path: context.std_path.clone()
         }
     }
     pub fn after_call(&mut self, context: Context, inline: bool) {
@@ -470,6 +494,12 @@ impl Context {
     }
     pub fn get_fn_mut(&mut self, id: &String, pattern: &Vec<Type>) -> Option<&mut Function> {
         self.get_scope_fn_mut(id, pattern)?.get_fn_mut(id, pattern)
+    }
+    pub fn get_fn_pos(&self, id: &String, pattern: &Vec<Type>) -> Option<&Position> {
+        match self.get_scope_fn(id, pattern) {
+            Some(scope) => scope.get_fn_pos(id, pattern),
+            None => self.get_scope_native_fn(id, pattern)?.get_fn_pos(id, pattern)
+        }
     }
     pub fn fn_exists(&self, id: &String) -> bool {
         if self.global.fn_exists(id) { return true }
