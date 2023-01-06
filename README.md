@@ -62,6 +62,9 @@ The language is pretty strict with it's types, even though it's interpreted.
 | any       | a special type as it has no value of it's type, used for parameters as it matches with any other type
 
 # Contact
+
 **Discord**: `sty#8189`
+
 **Gmail**: `reutervincent6@gmail.com`
+
 Help is always welcome!
