@@ -17,7 +17,7 @@ use std::collections::HashMap;
 use std::fmt::{Debug, Display};
 use core::num::IntErrorKind;
 use std::cmp::{min, max};
-use std::io::Write;
+use std::io::{Write, stdin, stdout};
 use std::{thread, fs, env};
 
 const STACK_SIZE: usize = 4 * 1024 * 1024;
@@ -61,14 +61,37 @@ pub fn nody() {
         Context::new("<STD>".to_string(), std_path)
     });
     match args.next() {
-        Some(path) => match run_file_context(path, &mut context) {
-            Ok((value, ret)) => if let Some(value) = value { println!("{value}") }
-            Err(e) => println!("{e}\n{}", print_trace(&context.trace))
+        Some(path) => match path.as_str() {
+            "-i" | "-interpret" => if let Some(text) = args.next() {
+                match run_context(&"<stdin>".to_string(), text.clone(), &mut context) {
+                    Ok((value, ret)) => if let Some(value) = value { println!("{value}") }
+                    Err(e) => println!("{e}\n{}", print_trace(&context.trace)) 
+                }
+            }
+            "-h" | "-help" => {
+                println!("USAGE:");
+                println!("  nody                        -> opens the shell");
+                println!("  nody [file path]            -> execute file");
+                println!("  nody -h/-help               -> prints out this usage page");
+                println!("  nody -i/-interpret [code]   -> execute code");
+            }
+            _ => match run_file_context(path, &mut context) {
+                Ok((value, ret)) => if let Some(value) = value { println!("{value}") }
+                Err(e) => println!("{e}\n{}", print_trace(&context.trace))
+            }
         }
         None => {
-            println!("This is Nody interpreter is written in Rust.");
-            println!("USAGE:");
-            println!("  nody [file path] - execute file");
+            println!("This is the Nody shell");
+            loop {
+                let mut input = String::new();
+                print!("> ");
+                stdout().flush();
+                stdin().read_line(&mut input);
+                match run_context(&"<stdin>".to_string(), input, &mut context) {
+                    Ok((value, ret)) => if let Some(value) = value { println!("{value}") }
+                    Err(e) => println!("{e}\n{}", print_trace(&context.trace))
+                }
+            }
         }
     }
 }
